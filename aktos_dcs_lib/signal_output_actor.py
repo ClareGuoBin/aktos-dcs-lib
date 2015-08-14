@@ -41,6 +41,8 @@ class ServoActor(Actor):
         self.STOP = signal.SIGUSR2
         self.HB = signal.SIGUSR1
 
+        self.run_heartbeat = True
+
         self.file_dir = cmd_subfolder = os.path.realpath(
             os.path.abspath(
                 os.path.join(os.path.split(inspect.getfile(inspect.currentframe()))[0],".")))
@@ -49,18 +51,27 @@ class ServoActor(Actor):
         self.wait_started()
 
     def start_driver(self):
-        try:
-            call(['rm', '/var/run/pigpio.pid'])
-        except Exception, e:
-            print "error removing pid file: ", e.message
+        while True:
+            try:
+                try:
+                    call(['rm', '/var/run/pigpio.pid'])
+                except Exception, e:
+                    pass
+
+                self.cleanup()
 
 
-        self.driver_name = 'swave2'
-        swave_path = os.path.join(self.file_dir, self.driver_name)
-        print "swave executable: ", swave_path
-        self.swave = Popen([swave_path])
-        sleep(1) # change this line with "as soon as started"
-        gevent.spawn(self.send_heartbeat)
+                self.driver_name = 'swave2'
+                swave_path = os.path.join(self.file_dir, self.driver_name)
+                print "swave executable: ", swave_path
+                self.swave = Popen([swave_path])
+                sleep(1) # change this line with "as soon as started"
+                self.send_signal(self.HB)
+                self.run_heartbeat = True
+                gevent.spawn(self.send_heartbeat)
+                break
+            except:
+                pass
 
         self.__is_started = True
 
@@ -98,7 +109,7 @@ class ServoActor(Actor):
         self.set_enab(False)
 
     def send_heartbeat(self):
-        while self.running:
+        while self.run_heartbeat:
             self.send_signal(self.HB)
             sleep(0.3)
 
@@ -107,7 +118,9 @@ class ServoActor(Actor):
         self.swave.send_signal(signal)
 
     def cleanup(self):
+        print "cleaning up ServoActor..."
         try:
+            self.run_heartbeat = False
             call(['killall', self.driver_name])
             print "killed successfully..."
         except Exception, e:

@@ -74,12 +74,14 @@ class GPIOInputActor(Actor):
             sleep(0.5) # TODO: this is too long!
 
     def cleanup(self):
+        """
         print "GPIO cleanup..."
         try:
             GPIO.cleanup()
         except:
             pass
-
+        """
+        pass
 
 if __name__ == "__main__":
 
