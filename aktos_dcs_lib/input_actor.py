@@ -1,11 +1,11 @@
 __author__ = 'aktos'
 
 from aktos_dcs import *
-import RPi.GPIO as GPIO
 
 class GPIOInputActor(Actor):
 
     def __init__(self, pin_name, pin_number, invert=False, pull_up_down="pull_up"):
+        import RPi.GPIO as GPIO
         Actor.__init__(self)
         self.pin_name = pin_name
         self.pin_number = pin_number

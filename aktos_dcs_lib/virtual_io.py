@@ -2,7 +2,6 @@ __author__ = 'aktos'
 
 
 from aktos_dcs import *
-import RPi.GPIO as GPIO
 
 class VirtualIoActor(Actor):
 
