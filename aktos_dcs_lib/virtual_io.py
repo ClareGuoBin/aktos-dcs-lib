@@ -36,19 +36,6 @@ class VirtualIoActor(Actor):
         self.last_change = time.time()
 
 
-    def cleanup(self):
-        """
-        print "GPIO cleanup..."
-        try:
-            GPIO.cleanup()
-        except:
-            pass
-        """
-        GPIO.output(self.pin_number, False)
-        GPIO.setup(self.pin_number, GPIO.IN)
-        pass
-
-
 
 if __name__ == "__main__":
 
