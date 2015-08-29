@@ -7,14 +7,15 @@ class GPIOOutputActor(Actor):
 
     def __init__(self, pin_name, pin_number, invert=False, initial=False,):
         import RPi.GPIO as GPIO
+        self.GPIO = GPIO
         Actor.__init__(self)
         self.pin_name = pin_name
         self.pin_number = pin_number
         self.invert = invert
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.pin_number, GPIO.OUT)
+        self.GPIO.setmode(self.GPIO.BCM)
+        self.GPIO.setup(self.pin_number, self.GPIO.OUT)
         self.set_output(initial)
-        GPIO.setwarnings(False)
+        self.GPIO.setwarnings(False)
 
 
     def handle_UpdateIoMessage(self, msg):
@@ -40,18 +41,18 @@ class GPIOOutputActor(Actor):
         self.curr_state = val
         self.last_change = time.time()
 
-        GPIO.output(self.pin_number, self.correct(self.curr_state))
+        self.GPIO.output(self.pin_number, self.correct(self.curr_state))
 
     def cleanup(self):
         """
         print "GPIO cleanup..."
         try:
-            GPIO.cleanup()
+            self.GPIO.cleanup()
         except:
             pass
         """
-        GPIO.output(self.pin_number, False)
-        GPIO.setup(self.pin_number, GPIO.IN)
+        self.GPIO.output(self.pin_number, False)
+        self.GPIO.setup(self.pin_number, self.GPIO.IN)
         pass
 
 

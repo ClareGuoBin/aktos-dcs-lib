@@ -6,25 +6,26 @@ class GPIOInputActor(Actor):
 
     def __init__(self, pin_name, pin_number, invert=False, pull_up_down="pull_up"):
         import RPi.GPIO as GPIO
+        self.GPIO = GPIO
         Actor.__init__(self)
         self.pin_name = pin_name
         self.pin_number = pin_number
         self.invert = invert
         print "initializing ", self.pin_name, " (", self.pin_number, ")"
-        GPIO.setmode(GPIO.BCM)
+        self.GPIO.setmode(self.GPIO.BCM)
 
-        p = GPIO.PUD_UP
+        p = self.GPIO.PUD_UP
         if pull_up_down != "pull_up":
-            p = GPIO.PUD_DOWN
+            p = self.GPIO.PUD_DOWN
 
-        GPIO.setup(self.pin_number, GPIO.IN, pull_up_down=p)
+        self.GPIO.setup(self.pin_number, self.GPIO.IN, pull_up_down=p)
         self.last_change = -1
         self.curr_state = 0
         self.prev_state = 0
 
-        GPIO.setwarnings(False)
+        self.GPIO.setwarnings(False)
 
-        GPIO.add_event_detect(self.pin_number, GPIO.BOTH, callback=self.gpio_callback)
+        self.GPIO.add_event_detect(self.pin_number, self.GPIO.BOTH, callback=self.gpio_callback)
 
     def handle_UpdateIoMessage(self, msg):
         print "notifying input status: ", self.pin_name, ": ", self.curr_state
@@ -47,7 +48,7 @@ class GPIOInputActor(Actor):
             self.poll_gpio()
 
     def poll_gpio(self):
-        self.curr_state = self.correct(GPIO.input(self.pin_number))
+        self.curr_state = self.correct(self.GPIO.input(self.pin_number))
 
         if self.curr_state != self.prev_state:
             edge = ""
@@ -77,7 +78,7 @@ class GPIOInputActor(Actor):
         """
         print "GPIO cleanup..."
         try:
-            GPIO.cleanup()
+            self.GPIO.cleanup()
         except:
             pass
         """
