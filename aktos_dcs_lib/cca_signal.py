@@ -4,8 +4,8 @@ import inspect
 import gevent
 from gevent.queue import Queue, Full, Empty
 import time
+from singleton import Singleton
 
-from gevent_actor import Singleton
 
 class CcaSignalLoop(object):
     __metaclass__ = Singleton
