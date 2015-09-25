@@ -34,7 +34,7 @@ class MarkdownConfig(object):
         else:
             self.indent = ' ' * 2
 
-        print "indent char: ", repr(self.indent)
+        #print "DEBUG: indent char: ", repr(self.indent)
 
 
     def flatten(self):
@@ -72,6 +72,30 @@ class MarkdownConfig(object):
                 flattened.append(parent + [line.strip()])
 
         return flattened
+
+    def flat_dict(self):
+        flat_list = self.flatten()
+        _dict = {}
+        for i in flat_list:
+            last_key, value = i[-1].split(':')
+            value = value.strip()
+            if value:
+                try:
+                    if len(value.split('.')) > 1:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except:
+                    pass
+
+                stripped_keys = [j.replace(':', '') for j in i[:-1]]
+                keys = stripped_keys + [last_key]
+                flat_key = '.'.join(keys)
+                _dict[flat_key] = value
+
+        pprint(_dict)
+
+
 
     def test_flattened_1(self):
         config_file = """
@@ -135,20 +159,55 @@ c:f: 5"""
 
 
 class AktosConfig(MarkdownConfig):
-    def config_table(self):
+    """
+    example config:
+
+        a:
+            b:
+                c: 1
+                d: 2
+            e: 3
+        f: 4
+
+    flatten:
+
+
+
+    raw_config_table:
+    [
+        ['a:', 'b:', 'c: 1'],
+        ['a:', 'b:', 'd: 2'],
+        ['a:', 'e: 3'],
+        ['f: 4'],
+    ]
+
+    flat_dict:
+
+    {
+        'a.b.c': 1,
+        'a.b.d': 2,
+        'a.e': 3,
+        'f': 4,
+    }
+    """
+    def raw_config_table(self):
         """
         :return: lines which have ":..." at the end
         """
         flatten = self.flatten()
         flatten_cfg = [l for l in flatten if len(l[-1].split(':')[1].strip()) > 0]
-
-        for l in flatten_cfg:
-            print ''.join(l)
-
         return flatten_cfg
 
+    def raw_config_table_str(self):
+        for l in self.raw_config_table():
+            print ''.join(l)
+
+
+
 if __name__ == '__main__':
-    c = AktosConfig('test-config.md')
+    c = AktosConfig('aktos-parser-test2.db')
     c.tests()
-    c.config_table()
+    #pprint(c.raw_config_table())
+    c.flat_dict()
+
     
