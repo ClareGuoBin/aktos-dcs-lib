@@ -77,29 +77,46 @@ class MarkdownConfig(object):
         flat_list = self.flatten()
         _dict = {}
         for i in flat_list:
-            last_key, value = i[-1].split(':')
-            value = value.strip()
-            if value:
-                try:
-                    if len(value.split('.')) > 1:
-                        value = float(value)
-                    else:
-                        value = int(value)
-                except:
-                    pass
+            try:
+                last_key, value = i[-1].split(':')
+                value = value.strip()
+                if value:
+                    try:
+                        if len(value.split('.')) > 1:
+                            value = float(value)
+                        else:
+                            value = int(value)
+                    except:
+                        pass
 
-                stripped_keys = [j.replace(':', '') for j in i[:-1]]
-                keys = stripped_keys + [last_key]
-                flat_key = '.'.join(keys)
-                _dict[flat_key] = value
+                    stripped_keys = [j.replace(':', '') for j in i[:-1]]
+                    keys = stripped_keys + [last_key]
+                    flat_key = '.'.join(keys)
+                    _dict[flat_key] = value
+            except:
+                pass
 
         #pprint(_dict)
         return _dict
 
+    def flat_list(self):
+        return self.flatten()
+
+    def flat_list_str(self):
+        out = []
+        for i in self.flat_list():
+            out.append(''.join(i))
+
+        return '\n'.join(out)
+
+
 
 
     def test_flattened_1(self):
-        config_file = """
+        input_config = []
+        expected_output = []
+
+        input_config.append("""
 a:
     b: 1
     c: 2
@@ -117,9 +134,10 @@ b: 1
 
 c:
     f: 5
-        """
+        """)
 
-        expected = """a:
+        expected_output.append("""
+a:
 a:b: 1
 a:c: 2
 a:d:
@@ -133,11 +151,43 @@ a:e:dd: 123
 a:e:ee: 567
 b: 1
 c:
-c:f: 5"""
+c:f: 5
+            """)
 
-        flatten = self._flatten(config_file)
-        flatten = '\n'.join([''.join(i) for i in flatten])
-        assert flatten == expected
+
+        input_config.append("""
+a
+    b
+        c
+    d
+        e
+    f:1
+        g: 3
+        """)
+
+        expected_output.append("""
+a
+ab
+abc
+ad
+ade
+af:1
+af:1g: 3
+
+            """)
+
+
+        for i in range(len(input_config)):
+            print "Performing test %d..." % (i+1)
+            config_file = input_config[i]
+            expected = expected_output[i]
+
+            config_file = config_file.strip()
+            expected = expected.strip().lstrip()
+
+            flatten = self._flatten(config_file)
+            flatten = '\n'.join([''.join(i) for i in flatten])
+            assert flatten == expected
 
     def tests(self):
         self.test_flattened_1()
@@ -209,6 +259,7 @@ if __name__ == '__main__':
     c = AktosConfig('aktos-parser-test2.db')
     c.tests()
     #pprint(c.raw_config_table())
-    c.flat_dict()
-
+    pprint(c.flat_dict())
+    print(c.flat_list_str())
+    #import code; code.interact(local=locals())
     
