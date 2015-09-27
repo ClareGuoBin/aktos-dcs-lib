@@ -102,79 +102,85 @@ class MarkdownConfig(object):
     def flat_list(self):
         return self.flatten()
 
-    def flat_list_str(self):
-        out = []
-        for i in self.flat_list():
-            out.append(''.join(i))
+    def flat_list_str(self, config_str=None):
+        if not config_str:
+            config_str = self.content
 
-        return '\n'.join(out)
+        flatten = self._flatten(config_str)
+        return '\n'.join([''.join(i) for i in flatten])
 
 
 
 
     def test_flattened_1(self):
+        import textwrap
+
         input_config = []
         expected_output = []
 
-        input_config.append("""
-a:
-    b: 1
-    c: 2
-    d:
-        aa: 3
-        bb: 4
-        cc:
-            aaa: 5
-            bbb: 6
-    e:
-        dd: 123
-        ee: 567
+        i = """
+            a:
+                b: 1
+                c: 2
+                d:
+                    aa: 3
+                    bb: 4
+                    cc:
+                        aaa: 5
+                        bbb: 6
+                e:
+                    dd: 123
+                    ee: 567
 
-b: 1
+            b: 1
 
-c:
-    f: 5
-        """)
+            c:
+                f: 5
+        """
 
-        expected_output.append("""
-a:
-a:b: 1
-a:c: 2
-a:d:
-a:d:aa: 3
-a:d:bb: 4
-a:d:cc:
-a:d:cc:aaa: 5
-a:d:cc:bbb: 6
-a:e:
-a:e:dd: 123
-a:e:ee: 567
-b: 1
-c:
-c:f: 5
-            """)
+        o = """
+            a:
+            a:b: 1
+            a:c: 2
+            a:d:
+            a:d:aa: 3
+            a:d:bb: 4
+            a:d:cc:
+            a:d:cc:aaa: 5
+            a:d:cc:bbb: 6
+            a:e:
+            a:e:dd: 123
+            a:e:ee: 567
+            b: 1
+            c:
+            c:f: 5
+        """
 
+        input_config.append(i)
+        expected_output.append(o)
 
-        input_config.append("""
-a
-    b
-        c
-    d
-        e
-    f:1
-        g: 3
-        """)
+        i = """
+            a
+                b
+                    c
+                d
+                    e
+                f:1
+                    g: 3
 
-        expected_output.append("""
-a
-ab
-abc
-ad
-ade
-af:1
-af:1g: 3
+        """
+        o = """
+            a
+            ab
+            abc
+            ad
+            ade
+            af:1
+            af:1g: 3
 
-            """)
+        """
+        input_config.append(i)
+        expected_output.append(o)
 
 
         for i in range(len(input_config)):
@@ -182,11 +188,14 @@ af:1g: 3
             config_file = input_config[i]
             expected = expected_output[i]
 
-            config_file = config_file.strip()
-            expected = expected.strip().lstrip()
+            config_file = textwrap.dedent(config_file)
+            expected = textwrap.dedent(expected)
 
-            flatten = self._flatten(config_file)
-            flatten = '\n'.join([''.join(i) for i in flatten])
+            config_file = config_file.strip()
+            expected = expected.strip()
+
+            flatten = self.flat_list_str(config_file)
+
             assert flatten == expected
 
     def tests(self):
