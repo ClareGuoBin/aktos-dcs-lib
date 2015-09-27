@@ -93,7 +93,8 @@ class MarkdownConfig(object):
                 flat_key = '.'.join(keys)
                 _dict[flat_key] = value
 
-        pprint(_dict)
+        #pprint(_dict)
+        return _dict
 
 
 
