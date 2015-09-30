@@ -39,16 +39,23 @@ class DatabaseActor(Actor):
     def handle_RunSQL(self, msg):
         msg_body = get_msg_body(msg)
         query = msg_body['query']
+
+        self.run_query(query)
+
+    def run_query(self, query):
         try:
             self.cur.execute(query)
             self.db.commit()
 
+            output = []
             while True:
                 row = self.cur.fetchone()
                 if not row:
                     break
                 print "Output:\t\t", row
+                output.append(row)
 
+            return output
         except Exception as e:
             print "problem, rolling back... msg: ", e
             self.db.rollback()
