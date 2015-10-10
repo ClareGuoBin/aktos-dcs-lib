@@ -67,10 +67,11 @@ class GPIOInputActor(Actor):
         return False
 
     def action(self):
+        sleep(1)
         while self.running:
             if self.poll_gpio():
                 print
-                print "******************************++ THIS IS A BIG PROBLEM IN INPUT_ACTOR!"
+                print "***************************** THIS IS A BIG PROBLEM IN INPUT_ACTOR! REPORT THIS!"
                 print
             sleep(0.5) # TODO: this is too long!
 
@@ -90,7 +91,7 @@ if __name__ == "__main__":
 
     class Test(Actor):
         def handle_IoMessage(self, msg):
-            msg = msg_body(msg)
+            msg = get_msg_body(msg)
             print "Test got IoMessage: ", msg
 
 
@@ -99,7 +100,7 @@ if __name__ == "__main__":
         'fully-opened'  : 24,
         'fully-closed'  : 23,
         'move-forward'  : 8,
-        'move-backward' : 7,
+        'move-backward' : 27,
     }
 
     for k, v in input_pins.items():

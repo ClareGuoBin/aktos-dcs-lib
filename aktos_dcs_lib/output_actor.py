@@ -32,7 +32,7 @@ class GPIOOutputActor(Actor):
             return bool(input_val)
 
     def handle_IoMessage(self, msg):
-        msg = msg_body(msg)
+        msg = get_msg_body(msg)
         if msg['pin_name'] == self.pin_name:
             self.set_output(msg['val'])
 
