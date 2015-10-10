@@ -1,4 +1,4 @@
-# aktos-dcs-lib-cca
+# aktos-dcs-lib
 
 Automation library intended to use with [aktos-dcs](https://github.com/ceremcem/aktos-dcs). 
 
