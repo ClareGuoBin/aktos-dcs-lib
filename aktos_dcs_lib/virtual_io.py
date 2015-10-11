@@ -26,7 +26,7 @@ class VirtualIoActor(Actor):
             return bool(input_val)
 
     def handle_IoMessage(self, msg):
-        msg = msg_body(msg)
+        msg = get_msg_body(msg)
         if msg['pin_name'] == self.pin_name:
             self.set_output(msg['val'])
 
@@ -38,31 +38,4 @@ class VirtualIoActor(Actor):
 
 
 if __name__ == "__main__":
-
-    ProxyActor()
-
-    class Test(Actor):
-        pass
-
-    output_pins = {
-        'piston.dir'         : 22,
-    }
-
-    for k, v in output_pins.items():
-        GPIOOutputActor(pin_name=k, pin_number=v, initial=True)
-
-    def periodic_on_off():
-        print "sleeping 5s..."
-        sleep(5)
-        print "sleep end..."
-        test = Test()
-        a = 0.1
-        val = True
-        while True:
-            test.send({'IoMessage': {'pin_name': 'piston.dir', 'val': val}})
-            sleep(a)
-            val = not val
-
-    periodic_on_off()
-
-    wait_all()
+    pass
