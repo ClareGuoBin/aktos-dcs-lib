@@ -16,9 +16,16 @@ except ImportError:
 class DatabaseActor(Actor):
     def __init__(self, host="localhost", port=3306, user="root", passwd='', db=''):
         Actor.__init__(self)
-        self.connect(host=host, port=port, user=user, passwd=passwd, db=db)
+        self.conn_params = [host, port, user, passwd, db]
+        self.conn_retry_count = 0
+        self.cur = None
 
-    def connect(self, host="localhost", port=3306, user="root", passwd='', db=''):
+        self.try_to_connect()
+
+    def connect(self, host="localhost", port=3306, user="root", passwd='', db='', conn_params = []):
+
+        if conn_params:
+            host, port, user, passwd, db = conn_params
 
         if port != 3306 and host == "localhost":
             host = '127.0.0.1'
@@ -42,7 +49,18 @@ class DatabaseActor(Actor):
 
         self.run_query(query)
 
+    def try_to_connect(self):
+        for i in range(3):
+            if not self.cur:
+                print "INFO: CONNECTION MIGHT BE LOST, RETRYING..."
+                self.connect(conn_params = self.conn_params)
+                self.conn_retry_count += 1
+            else:
+                break
+
     def run_query(self, query):
+        self.try_to_connect()
+
         try:
             self.cur.execute(query)
             self.db.commit()
@@ -54,7 +72,6 @@ class DatabaseActor(Actor):
                     break
                 print "Output:\t\t", row
                 output.append(row)
-
             return output
         except Exception as e:
             print "problem, rolling back... msg: ", e
