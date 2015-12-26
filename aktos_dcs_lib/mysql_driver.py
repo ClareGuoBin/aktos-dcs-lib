@@ -61,21 +61,26 @@ class DatabaseActor(Actor):
     def run_query(self, query):
         self.try_to_connect()
 
-        try:
-            self.cur.execute(query)
-            self.db.commit()
+        max_retry_query = 10 
+        for i in range(max_retry_query): 
+            try:
+                self.cur.execute(query)
+                self.db.commit()
 
-            output = []
-            while True:
-                row = self.cur.fetchone()
-                if not row:
-                    break
-                print "Output:\t\t", row
-                output.append(row)
-            return output
-        except Exception as e:
-            print "problem, rolling back... msg: ", e
-            self.db.rollback()
+                output = []
+                while True:
+                    row = self.cur.fetchone()
+                    if not row:
+                        break
+                    print "Output:\t\t", row
+                    output.append(row)
+                return output
+            except Exception as e:
+                print "problem, rolling back... msg: ", e
+                try:
+                    self.db.rollback()
+                except: 
+                    self.try_to_connect()
 
     def cleanup(self):
         self.cur.close()
