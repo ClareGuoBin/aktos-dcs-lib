@@ -80,6 +80,8 @@ class DatabaseActor(Actor):
                 try:
                     self.db.rollback()
                 except: 
+                    print "Exception while rolling back..."
+                finally: 
                     self.try_to_connect()
 
     def cleanup(self):
