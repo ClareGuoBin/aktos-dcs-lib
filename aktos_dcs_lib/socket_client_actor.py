@@ -62,7 +62,7 @@ class SocketClientActor(Actor):
     def cleanup(self):
         self.client_socket.close()
 
-def test_socket_client():
+if __name__ == "__main__":
     class Test(Actor):
         def handle_SocketClientMessage(self, msg_raw):
             msg = get_msg_body(msg_raw)
@@ -86,23 +86,3 @@ def test_socket_client():
     Test()
     #TestIo()
     wait_all()
-
-if __name__ == "__main__":
-    #test_socket_client()
-    pass
-
-from gevent.server import StreamServer
-
-def handle(socket, address):
-    print('new connection!')
-    while not socket.closed:
-        print "connection is alive...", address
-        sleep(1)
-
-server = StreamServer(('127.0.0.1', 1234), handle) # creates a new server
-server.start()
-
-
-while True:
-    sleep(1)
-print "program is ending..."
