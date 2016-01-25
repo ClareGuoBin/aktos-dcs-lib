@@ -28,7 +28,7 @@ class GPIOInputActor(Actor):
         self.GPIO.add_event_detect(self.pin_number, self.GPIO.BOTH, callback=self.gpio_callback)
 
     def handle_UpdateIoMessage(self, msg):
-        print "notifying input status: ", self.pin_name, ": ", self.curr_state
+        #print "notifying input status: ", self.pin_name, ": ", self.curr_state
         self.broadcast_status()
 
     def correct(self, input_val):
@@ -61,7 +61,7 @@ class GPIOInputActor(Actor):
             self.prev_state = self.curr_state
             self.last_change = time.time()
 
-            print "INPUT:\tchanged state: ", self.pin_name, " -> ", edge
+            #print "INPUT:\tchanged state: ", self.pin_name, " -> ", edge
             self.broadcast_status()
             return True
         return False
@@ -91,9 +91,7 @@ if __name__ == "__main__":
 
     class Test(Actor):
         def handle_IoMessage(self, msg):
-            msg = get_msg_body(msg)
             print "Test got IoMessage: ", msg
-
 
 
     input_pins = {
