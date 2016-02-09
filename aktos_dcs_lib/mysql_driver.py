@@ -19,8 +19,7 @@ class DatabaseActor(Actor):
         self.conn_params = [host, port, user, passwd, db]
         self.conn_retry_count = 0
         self.cur = None
-
-        ##self.try_to_connect()
+        self.try_to_connect()
 
     def connect(self, host="localhost", port=3306, user="root", passwd='', db='', conn_params = []):
 
@@ -44,20 +43,22 @@ class DatabaseActor(Actor):
         #print "connection done..."
 
     def try_to_connect(self):
-        for i in range(3):
+        while True:
             try:
                 self.cur.execute("SELECT VERSION()")
                 results = self.cur.fetchone()
-                assert not results 
-                break 
-            except:
-                print "INFO: CONNECTION MIGHT BE LOST, RETRYING..."
+                #print "RESULTS: ", results
+                if not results: 
+                    assert False
+                else: 
+                    break 
+            except Exception as e:
+                print "INFO: CONNECTION MIGHT BE LOST, RETRYING... (count: %d)" % self.conn_retry_count , e.message
                 self.connect(conn_params = self.conn_params)
                 self.conn_retry_count += 1
+            sleep(0.1)
 
     def run_query(self, query):
-        ##self.try_to_connect()
-
         max_retry_query = 10 
         for i in range(max_retry_query): 
             try:
