@@ -43,7 +43,6 @@ class DatabaseActor(Actor):
 
         #print "connection done..."
 
-
     def try_to_connect(self):
         for i in range(3):
             try:
