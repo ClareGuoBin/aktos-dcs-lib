@@ -7,3 +7,4 @@ from aktos_parser import *
 from socket_server_actor import *
 from socket_client_actor import *
 import Qt
+from hex_tools import *

@@ -37,7 +37,7 @@ class GPIOOutputActor(Actor):
             self.set_output(msg['val'])
 
     def set_output(self, val):
-        print "OUTPUT:\tsetting output: '%s' (#%d) -> %s" % (self.pin_name, self.pin_number, str(val))
+        #print "OUTPUT:\tsetting output: '%s' (#%d) -> %s" % (self.pin_name, self.pin_number, str(val))
         self.curr_state = val
         self.last_change = time.time()
 
