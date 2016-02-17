@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
             print "client sent data: ", msg["data"]
 
-    SocketServerActor('localhost', 1234)
+    SocketServerActor('0.0.0.0', 1234)
     TestSocketServerClient()
     wait_all()
 
