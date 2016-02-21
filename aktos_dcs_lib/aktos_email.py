@@ -90,13 +90,12 @@ class EMail(object):
                         msg.attach(part)
             return msg
 
-class AktosTelemetryMail(EMail):
-    def __init__(self):
+class AktosTelemetryMailBase(EMail):
+    def __init__(self, passwd):
         SMTPserver      = 'smtp.zoho.com'
         sender          = 'telemetry@aktos-elektronik.com'
-
         USERNAME        = "telemetry@aktos-elektronik.com"
-        PASSWORD        = "example_password_123456789"
+        PASSWORD        = passwd
 
         img_html = '<img alt="aktos elektronik" src="%s" />' % "https://aktos-elektronik.com/img/aktos-mail-signature-logo.png"
         mail_signature = "<p><a href='https://aktos-elektronik.com/'>%s</a></p>" % img_html
@@ -132,6 +131,12 @@ if __name__ == "__main__":
     from aktos_dcs import *
     import time
 
+    class TelemetryMail(AktosTelemetryMailBase):
+        def __init__(self):
+            passwd = "example-password"
+            AktosTelemetryMailBase.__init__(self, passwd)
+
+
 
     class TestGevent(Actor):
         def action(self):
@@ -141,7 +146,7 @@ if __name__ == "__main__":
                 sleep(0.1)
 
 
-    m = AktosTelemetryMail()
+    m = TelemetryMail()
     TestGevent()
     print("sending, %f" % time.time())
     m.sendMessage(["ceremcem@ceremcem.net", ""], "test-subject", "çalışöğün22", ["./cca_signal.py"])
