@@ -44,7 +44,7 @@ class EMail(object):
             msg = self.prepareMail(mailto, subject, msgContent, files)
 
             # connect to server and send email
-            server=smtplib.SMTP(self.smtpserver, port=self.EMAIL_PORT)
+            server = smtplib.SMTP(self.smtpserver, port=self.EMAIL_PORT)
             server.ehlo()
             # use encrypted SSL mode
             server.starttls()
