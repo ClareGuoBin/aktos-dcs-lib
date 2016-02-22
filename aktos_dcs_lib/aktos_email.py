@@ -39,7 +39,7 @@ class EMail(object):
 
 
             subject = make_unicode(subject)
-            #msgContent = make_unicode(msgContent)
+            msgContent = make_unicode(msgContent)
 
             msg = self.prepareMail(mailto, subject, msgContent, files)
 
@@ -78,8 +78,8 @@ class EMail(object):
             msg['Subject'] = subject
 
             #the Body message
-            msg.attach(MIMEText(msgHTML, 'html'))
-            msg.attach(MIMEText(self.mail_signature, "html"))
+            msg.attach(MIMEText(msgHTML, 'html', 'utf-8'))
+            msg.attach(MIMEText(self.mail_signature, "html", 'utf-8'))
             if attachments:
                 for phile in attachments:
                         # we could check for MIMETypes here
