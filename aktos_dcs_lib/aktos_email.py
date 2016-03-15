@@ -14,15 +14,33 @@ import os
 class EMail(object):
         """ Class defines method to send email
         """
-        def __init__(self, mailFrom, server, usrname, password, debug=False, signature=""):
+        def __init__(self, debug=False, signature=""):
             self.debug = debug
-            self.mailFrom = mailFrom
-            self.smtpserver = server
             self.EMAIL_PORT = 587
-            self.usrname = usrname
-            self.password = password
             self.greenlet = None
             self.mail_signature = signature
+
+            self.prepare_base()
+            self.prepare()
+
+            # check if class is prepared correctly
+            try:
+                _ = self.username
+                _ = self.password
+                _ = self.smtp_server
+                _ = self.mail_from
+            except:
+                raise
+
+        def prepare_base(self):
+            pass 
+        
+        def prepare(self):
+            """
+            override this function
+            :return:
+            """
+            pass
 
         def sendMessage(self, mailto, subject, msgContent, files=None):
             self.greenlet = gevent.spawn(self.__sendMessage, mailto, subject, msgContent, files)
@@ -44,16 +62,16 @@ class EMail(object):
             msg = self.prepareMail(mailto, subject, msgContent, files)
 
             # connect to server and send email
-            server = smtplib.SMTP(self.smtpserver, port=self.EMAIL_PORT)
+            server = smtplib.SMTP(self.smtp_server, port=self.EMAIL_PORT)
             server.ehlo()
             # use encrypted SSL mode
             server.starttls()
             # to make starttls work
             server.ehlo()
-            server.login(self.usrname, self.password)
+            server.login(self.username, self.password)
             server.set_debuglevel(self.debug)
             try:
-                failed = server.sendmail(self.mailFrom, mailto, msg.as_string())
+                failed = server.sendmail(self.mail_from, mailto, msg.as_string())
             except Exception as er:
                 print er
             finally:
@@ -72,7 +90,7 @@ class EMail(object):
                 mailto = ', '.join(mailto)
 
             msg = MIMEMultipart()
-            msg['From'] = self.mailFrom
+            msg['From'] = self.mail_from
             msg['To'] = mailto
             msg['Date'] = formatdate(localtime=True)
             msg['Subject'] = subject
@@ -91,34 +109,18 @@ class EMail(object):
             return msg
 
 class AktosTelemetryMailBase(EMail):
-    def __init__(self, passwd):
-        SMTPserver      = 'smtp.aktos.io'
-        sender          = 'telemetry@aktos.io'
-        USERNAME        = "telemetry@aktos.io"
-        PASSWORD        = passwd
+    def prepare_base(self):
+        self.smtp_server = 'smtp.aktos.io'
+        self.mail_from = 'telemetry@aktos.io'
+        self.username = "telemetry@aktos.io"
 
         img_html = '<img alt="aktos elektronik" src="%s" />' % "https://aktos.io/img/aktos-mail-signature-logo.png"
-        mail_signature = "<p><a href='https://aktos.io/'>%s</a></p>" % img_html
+        self.mail_signature = "<p><a href='https://aktos.io/'>%s</a></p>" % img_html
 
-        EMail.__init__(self,
-                       mailFrom=sender,
-                       server=SMTPserver,
-                       usrname=USERNAME,
-                       password=PASSWORD,
-                       signature=mail_signature)
+    def prepare(self):
+        self.password = "override password in your final class"
 
-        """
-        use instance of this class like this:
 
-            mail = AktosTelemetryMail()
-
-            recipients = ["ceremcem@ceremcem.net", "user@example.com"]
-            subject = "my test subject"
-            contents = "my test contents"
-            files = ["./path/to/file", "/path/to/another/file"]
-            mail.sendMessage(recipients, subject, contents, files)
-
-        """
 
 def make_unicode(input):
     if type(input) != unicode:
@@ -131,19 +133,20 @@ if __name__ == "__main__":
     from aktos_dcs import *
     import time
 
-    class TelemetryMail(AktosTelemetryMailBase):
-        def __init__(self):
-            passwd = "MB+L31oKtqsNNYjjSCxzd61cHKuRJrL76oNUtOQMutE="
-            AktosTelemetryMailBase.__init__(self, passwd)
 
-
-
+    # Test if Actors are working while mail is sending
     class TestGevent(Actor):
         def action(self):
             print "started action, ", time.time()
             while True:
                 print("naber, %d" % time.time())
                 sleep(0.1)
+
+
+    # Example Usage:
+    class TelemetryMail(AktosTelemetryMailBase):
+        def prepare(self):
+            self.password = "J6ctu9hgpVIfCsMDOG5SsjNKizCtXrRK85P7tCJl3k8="
 
 
     m = TelemetryMail()
