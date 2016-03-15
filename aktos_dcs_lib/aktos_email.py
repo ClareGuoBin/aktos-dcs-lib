@@ -92,13 +92,13 @@ class EMail(object):
 
 class AktosTelemetryMailBase(EMail):
     def __init__(self, passwd):
-        SMTPserver      = 'smtp.zoho.com'
-        sender          = 'telemetry@aktos-elektronik.com'
-        USERNAME        = "telemetry@aktos-elektronik.com"
+        SMTPserver      = 'smtp.aktos.io'
+        sender          = 'telemetry@aktos.io'
+        USERNAME        = "telemetry@aktos.io"
         PASSWORD        = passwd
 
-        img_html = '<img alt="aktos elektronik" src="%s" />' % "https://aktos-elektronik.com/img/aktos-mail-signature-logo.png"
-        mail_signature = "<p><a href='https://aktos-elektronik.com/'>%s</a></p>" % img_html
+        img_html = '<img alt="aktos elektronik" src="%s" />' % "https://aktos.io/img/aktos-mail-signature-logo.png"
+        mail_signature = "<p><a href='https://aktos.io/'>%s</a></p>" % img_html
 
         EMail.__init__(self,
                        mailFrom=sender,
@@ -133,7 +133,7 @@ if __name__ == "__main__":
 
     class TelemetryMail(AktosTelemetryMailBase):
         def __init__(self):
-            passwd = "example-password"
+            passwd = "MB+L31oKtqsNNYjjSCxzd61cHKuRJrL76oNUtOQMutE="
             AktosTelemetryMailBase.__init__(self, passwd)
 
 
