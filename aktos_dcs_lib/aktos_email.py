@@ -108,6 +108,8 @@ class EMail(object):
                         msg.attach(part)
             return msg
 
+
+# Base class for Aktos Telemetry Subsystem Mailer
 class AktosTelemetryMailBase(EMail):
     def prepare_base(self):
         self.smtp_server = 'smtp.aktos.io'
