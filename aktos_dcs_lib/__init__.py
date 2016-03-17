@@ -9,4 +9,5 @@ from socket_client_actor import *
 import Qt
 from hex_tools import *
 from aktos_email import *
-from mysql_driver import * 
+from mysql_driver import *
+from email_actor import EMailActor
