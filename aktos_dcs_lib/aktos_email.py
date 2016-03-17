@@ -24,47 +24,38 @@ class EMail(object):
             self.debug = debug
             self.greenlet = None
             self.mail_signature = signature
+            default_imap_port = 993
+            default_smtp_port = 587
+            self.imap_port = None
+            self.smtp_port = None
+            self.mail_from = None
+            self.username = None
+            self.password = None
+            self.smtp_server = None
+            self.imap_server = None
 
             self.prepare_base()
             self.prepare()
 
             # check if class is prepared correctly
-            try:
-                _ = self.username
-                _ = self.password
-                _ = self.smtp_server
-                _ = self.imap_server
-            except:
-                raise
-
+            assert self.username is not None
+            assert self.password is not None
+            assert self.smtp_server is not None
+            assert self.imap_server is not None
 
             # set defaults
-            try:
-                _ = self.imap_port
-            except:
-                self.imap_port = 143
-
-            try:
-                _ = self.smtp_port
-            except:
-                self.smtp_port = 587
-
-            try:
-                _ = self.mail_from
-            except:
-                self.mail_from = self.username
+            self.imap_port = self.imap_port or default_imap_port
+            self.smtp_port = self.smtp_port or default_smtp_port
+            self.mail_from = self.mail_from or self.username
 
             self.mailbox = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
             self.smtp_session = None
 
-            # alias
+            # alias functions
             self.send_mail = self.sendMessage
 
             # login in background
-            self.login_ok = False
-            self.login_barrier = Barrier()
-
-            gevent.spawn(self.login)
+            #gevent.spawn(self.login)
 
 
         def prepare_base(self):
@@ -79,8 +70,10 @@ class EMail(object):
 
 
         def login(self):
+            # login to imap session
             self.mailbox.login(self.username, self.password)
 
+            # login to smtp session
             server = smtplib.SMTP(self.smtp_server, port=self.smtp_port)
             server.ehlo()
             # use encrypted SSL mode
@@ -91,8 +84,6 @@ class EMail(object):
             server.set_debuglevel(self.debug)
 
             self.smtp_session = server
-            self.login_ok = True
-            self.login_barrier.go()
 
         def quit(self):
             self.smtp_session.quit()
@@ -112,22 +103,23 @@ class EMail(object):
                     files(List): list of files to be attached
                     mailto(string): email address to be sent to
             """
-            if not self.login_ok:
-                #print "WARNING: Not logged in yet, waiting for log in", time.time()
-                self.login_barrier.wait()
-                #print "INFO: Logged in, continuing sending message...", time.time()
-
-
             subject = make_unicode(subject)
             msgContent = make_unicode(msgContent)
 
             msg = self.prepareMail(mailto, subject, msgContent, files)
 
             # connect to server and send email
-            try:
-                failed = self.smtp_session.sendmail(self.mail_from, mailto, msg.as_string())
-            except Exception as er:
-                print er
+            i = 0
+            while True:
+                try:
+                    failed = self.smtp_session.sendmail(self.mail_from, mailto, msg.as_string())
+                    break
+                except Exception as er:
+                    print er
+                    print "INFO: trying to logging in again after %d seconds..." % i
+                    gevent.sleep(i)
+                    self.login()
+                i += 1
 
         def prepareMail(self, mailto, subject, msgHTML, attachments):
             """ Prepare the email to send
@@ -161,16 +153,19 @@ class EMail(object):
             return msg
 
         def get_last_mail_index(self):
-            if not self.login_ok:
-                #print "WARNING: Not logged in yet, waiting for log in", time.time()
-                self.login_barrier.wait()
-                #print "INFO: Logged in, continuing getting message...", time.time()
-
-            resp, received_list = self.mailbox.select("inbox")
-            if resp == "OK":
-                last_msg_num = received_list[0].split()[-1]
-            else:
-                last_msg_num = None
+            last_msg_num = None
+            for i in range(20):
+                try:
+                    resp, received_list = self.mailbox.select("inbox")
+                    if resp == "OK":
+                        last_msg_num = received_list[0].split()[-1]
+                        break
+                    else:
+                        gevent.sleep(i)
+                        assert False
+                except:
+                    print "INFO: trying to login in order to get mail index..."
+                    self.login()
             return last_msg_num
 
 
