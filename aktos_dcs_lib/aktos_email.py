@@ -48,14 +48,13 @@ class EMail(object):
             self.smtp_port = self.smtp_port or default_smtp_port
             self.mail_from = self.mail_from or self.username
 
-            self.mailbox = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
             self.smtp_session = None
 
             # alias functions
             self.send_mail = self.sendMessage
 
             # login in background
-            #gevent.spawn(self.login)
+            gevent.spawn(self.login)
 
 
         def prepare_base(self):
@@ -71,6 +70,7 @@ class EMail(object):
 
         def login(self):
             # login to imap session
+            self.mailbox = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
             self.mailbox.login(self.username, self.password)
 
             # login to smtp session
