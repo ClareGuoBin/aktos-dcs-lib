@@ -40,8 +40,7 @@ class EMailActor(EMail, Actor):
 
 class TelemetryMailActorBase(EMailActor):
     def prepare_base(self):
-        self.username = "telemetry@aktos-elektronik.com"
-        self.mail_from = 'telemetry@aktos-elektronik.com'
+        self.username = "tel@aktos.io"
         self.imap_server = 'imappro.zoho.com'
         self.imap_port = 993
         self.smtp_server = "smtp.zoho.com"
@@ -61,7 +60,7 @@ if __name__ == "__main__":
     class TelemetryMailActor(TelemetryMailActorBase):
         def prepare(self):
             print "Prepare is run!"
-            self.password = "r1D84N9HxSdzv0Hrx29k1OUY2NnvjJFBpkX0XNxONto="
+            self.password = "dhUlVfqpHLl9UnvrvVZN7D2dYhYf+VR1AzS2SsdsL84="
 
         def action(self):
             i = 0
@@ -90,6 +89,8 @@ if __name__ == "__main__":
                                                                       mail["unix_timestamp"])
 
 
+            print "Forwarding message to cem@aktos.io"
+            self.send_mail(["cem@aktos.io"], "Forwarded message from telemetry", pack(mail))
 
     TelemetryMailActor()
     wait_all()
