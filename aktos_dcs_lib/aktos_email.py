@@ -8,7 +8,14 @@ from email.MIMEText import MIMEText
 from email.Utils import COMMASPACE, formatdate
 from email import Encoders
 import smtplib
+import imaplib
 import gevent
+import os
+from aktos_dcs.unicode_tools import *
+import email
+import email.header
+import datetime
+import calendar
 import os
 
 class EMail(object):
@@ -16,7 +23,6 @@ class EMail(object):
         """
         def __init__(self, debug=False, signature=""):
             self.debug = debug
-            self.EMAIL_PORT = 587
             self.greenlet = None
             self.mail_signature = signature
 
@@ -29,8 +35,26 @@ class EMail(object):
                 _ = self.password
                 _ = self.smtp_server
                 _ = self.mail_from
+                _ = self.imap_server
             except:
                 raise
+
+            try:
+                _ = self.imap_port
+            except:
+                self.imap_port = 143
+
+            try:
+                _ = self.smtp_port
+            except:
+                self.smtp_port = 587
+
+            self.mailbox = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+            self.mailbox.login(self.username, self.password)
+
+            # alias
+            self.send_mail = self.sendMessage
+
 
         def prepare_base(self):
             pass 
@@ -62,7 +86,7 @@ class EMail(object):
             msg = self.prepareMail(mailto, subject, msgContent, files)
 
             # connect to server and send email
-            server = smtplib.SMTP(self.smtp_server, port=self.EMAIL_PORT)
+            server = smtplib.SMTP(self.smtp_server, port=self.smtp_port)
             server.ehlo()
             # use encrypted SSL mode
             server.starttls()
@@ -108,53 +132,107 @@ class EMail(object):
                         msg.attach(part)
             return msg
 
+        def get_last_mail(self):
+            last_mail = {
+                "index": None,
+                "from": None,
+                "to": None,
+                "subject": None,
+                "unix_timestamp": None,
+                "body": None,
+            }
+
+            resp, received_list = self.mailbox.select("inbox")
+            if resp == "OK":
+                last_msg_num = received_list[0].split()[-1]
+                for num in [last_msg_num]:
+                    rv, data = m.mailbox.fetch(num, '(RFC822)')
+                    if rv != 'OK':
+                        print "ERROR getting message", num
+                        break
+
+                    msg = email.message_from_string(data[0][1])
+                    decode = email.header.decode_header(msg['Subject'])[0]
+                    subject = make_unicode(decode[0])
+
+                    last_mail["subject"] = subject
+                    last_mail["from"] = msg["from"]
+                    last_mail["to"] = msg["to"]
+                    last_mail["index"] = num
+
+                    # Now convert to local date-time
+                    date_tuple = email.utils.parsedate_tz(msg['Date'])
+                    if date_tuple:
+                        last_mail["unix_timestamp"] = email.utils.mktime_tz(date_tuple)
+
+                    # get message body
+                    body = []
+                    if msg.get_content_maintype() == 'multipart': #If message is multi part we only want the text version of the body, this walks the message and gets the body.
+                        for part in msg.walk():
+                            if part.get_content_type() == "text/plain":
+                                _ = part.get_payload(decode=True)
+                                if len(_) > 0:
+                                    body.append(_)
+                            else:
+                                continue
+
+                    last_mail["body"] = '\n'.join(body)
+
+            return last_mail
+
 
 # Base class for Aktos Telemetry Subsystem Mailer
 class AktosTelemetryMailBase(EMail):
     def prepare_base(self):
-        self.smtp_server = 'smtp.aktos.io'
-        self.mail_from = 'telemetry@aktos.io'
-        self.username = "telemetry@aktos.io"
-
-        img_html = '<img alt="aktos elektronik" src="%s" />' % "https://aktos.io/img/aktos-mail-signature-logo.png"
-        self.mail_signature = "<p><a href='https://aktos.io/'>%s</a></p>" % img_html
+        self.username = "telemetry@aktos-elektronik.com"
+        self.mail_from = 'telemetry@aktos-elektronik.com'
+        self.imap_server = 'imappro.zoho.com'
+        self.imap_port = 993
+        self.smtp_server = "smtp.zoho.com"
+        self.smtp_port = 587
+        self.mail_signature = """
+            <p>
+                <a href='https://aktos.io/'>
+                    <img alt="aktos elektronik"
+                        src="https://aktos.io/img/aktos-mail-signature-logo.png" />
+                </a>
+            </p>
+            """
 
     def prepare(self):
-        self.password = "override password in your final class"
+        self.password = "r1D84N9HxSdzv0Hrx29k1OUY2NnvjJFBpkX0XNxONto="
 
 
-
-def make_unicode(input):
-    if type(input) != unicode:
-        input = input.decode('utf-8')
-        return input
-    else:
-        return input
 
 if __name__ == "__main__":
     from aktos_dcs import *
     import time
 
-
     # Test if Actors are working while mail is sending
     class TestGevent(Actor):
         def action(self):
-            print "started action, ", time.time()
+            print "Started test action, ", time.time()
             while True:
-                print("naber, %d" % time.time())
+                print("Hello!, %d" % time.time())
                 sleep(0.1)
 
+    TestGevent()
 
     # Example Usage:
     class TelemetryMail(AktosTelemetryMailBase):
-        def prepare(self):
-            self.password = "J6ctu9hgpVIfCsMDOG5SsjNKizCtXrRK85P7tCJl3k8="
+        pass
 
 
     m = TelemetryMail()
-    TestGevent()
     print("sending, %f" % time.time())
-    m.sendMessage(["ceremcem@ceremcem.net", ""], "test-subject", "çalışöğün22", ["./cca_signal.py"])
+    m.send_mail(["ceremcem@ceremcem.net", ""], "test-subject-çalışöğün-1234", "çalışöğün22", ["./cca_signal.py"])
+    recv = m.get_last_mail()
+
+    for k, v in recv.iteritems():
+        print "Entry:", k, "::", v
+
+    print "last mail is %d seconds ago", time.time() - recv["unix_timestamp"]
+
     print("finished: %f" % time.time())
     wait_all()
 
