@@ -233,8 +233,7 @@ class EMail(object):
 # Base class for Aktos Telemetry Subsystem Mailer
 class AktosTelemetryMailBase(EMail):
     def prepare_base(self):
-        self.username = "telemetry@aktos-elektronik.com"
-        self.mail_from = 'telemetry@aktos-elektronik.com'
+        self.username = "tel@aktos.io"
         self.imap_server = 'imappro.zoho.com'
         self.imap_port = 993
         self.smtp_server = "smtp.zoho.com"
@@ -266,15 +265,15 @@ if __name__ == "__main__":
     # Example Usage:
     class TelemetryMail(AktosTelemetryMailBase):
         def prepare(self):
-            self.password = "r1D84N9HxSdzv0Hrx29k1OUY2NnvjJFBpkX0XNxONto="
+            self.password = "this-is-your-account-password"
 
     m = TelemetryMail()
     print("sending, %f" % time.time())
 
     # send a mail
-    recipients = ["ceremcem@ceremcem.net", m.username]
-    subject = "test-subject-çalışöğün-1234"
-    content = "çalışöğün22"
+    recipients = ["ceremcem@ceremcem.net"]
+    subject = "test-subject-çalışöğün-221234"
+    content = "çalışöğün33"
     attachments = ["./cca_signal.py"]
     m.send_mail(recipients, subject, content, attachments)
 
