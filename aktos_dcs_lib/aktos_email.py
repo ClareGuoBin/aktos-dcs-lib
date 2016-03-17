@@ -10,13 +10,12 @@ from email import Encoders
 import smtplib
 import imaplib
 import gevent
-import os
 from aktos_dcs.unicode_tools import *
 import email
 import email.header
-import datetime
-import calendar
 import os
+from aktos_dcs import Barrier
+import time
 
 class EMail(object):
         """ Class defines method to send email
@@ -34,11 +33,12 @@ class EMail(object):
                 _ = self.username
                 _ = self.password
                 _ = self.smtp_server
-                _ = self.mail_from
                 _ = self.imap_server
             except:
                 raise
 
+
+            # set defaults
             try:
                 _ = self.imap_port
             except:
@@ -49,11 +49,22 @@ class EMail(object):
             except:
                 self.smtp_port = 587
 
+            try:
+                _ = self.mail_from
+            except:
+                self.mail_from = self.username
+
             self.mailbox = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-            self.mailbox.login(self.username, self.password)
+            self.smtp_session = None
 
             # alias
             self.send_mail = self.sendMessage
+
+            # login in background
+            self.login_ok = False
+            self.login_barrier = Barrier()
+
+            gevent.spawn(self.login)
 
 
         def prepare_base(self):
@@ -65,6 +76,29 @@ class EMail(object):
             :return:
             """
             pass
+
+
+        def login(self):
+            self.mailbox.login(self.username, self.password)
+
+            server = smtplib.SMTP(self.smtp_server, port=self.smtp_port)
+            server.ehlo()
+            # use encrypted SSL mode
+            server.starttls()
+            # to make starttls work
+            server.ehlo()
+            server.login(self.username, self.password)
+            server.set_debuglevel(self.debug)
+
+            self.smtp_session = server
+            self.login_ok = True
+            self.login_barrier.go()
+
+        def quit(self):
+            self.smtp_session.quit()
+            self.mailbox.close()
+            self.mailbox.logout()
+
 
         def sendMessage(self, mailto, subject, msgContent, files=None):
             self.greenlet = gevent.spawn(self.__sendMessage, mailto, subject, msgContent, files)
@@ -78,6 +112,10 @@ class EMail(object):
                     files(List): list of files to be attached
                     mailto(string): email address to be sent to
             """
+            if not self.login_ok:
+                #print "WARNING: Not logged in yet, waiting for log in", time.time()
+                self.login_barrier.wait()
+                #print "INFO: Logged in, continuing sending message...", time.time()
 
 
             subject = make_unicode(subject)
@@ -86,20 +124,10 @@ class EMail(object):
             msg = self.prepareMail(mailto, subject, msgContent, files)
 
             # connect to server and send email
-            server = smtplib.SMTP(self.smtp_server, port=self.smtp_port)
-            server.ehlo()
-            # use encrypted SSL mode
-            server.starttls()
-            # to make starttls work
-            server.ehlo()
-            server.login(self.username, self.password)
-            server.set_debuglevel(self.debug)
             try:
-                failed = server.sendmail(self.mail_from, mailto, msg.as_string())
+                failed = self.smtp_session.sendmail(self.mail_from, mailto, msg.as_string())
             except Exception as er:
                 print er
-            finally:
-                server.quit()
 
         def prepareMail(self, mailto, subject, msgHTML, attachments):
             """ Prepare the email to send
@@ -132,7 +160,27 @@ class EMail(object):
                         msg.attach(part)
             return msg
 
+        def get_last_mail_index(self):
+            if not self.login_ok:
+                #print "WARNING: Not logged in yet, waiting for log in", time.time()
+                self.login_barrier.wait()
+                #print "INFO: Logged in, continuing getting message...", time.time()
+
+            resp, received_list = self.mailbox.select("inbox")
+            if resp == "OK":
+                last_msg_num = received_list[0].split()[-1]
+            else:
+                last_msg_num = None
+            return last_msg_num
+
+
         def get_last_mail(self):
+            num = self.get_last_mail_index()
+            return self.get_mail(num)
+
+        def get_mail(self, index):
+            num = index
+
             last_mail = {
                 "index": None,
                 "from": None,
@@ -142,15 +190,9 @@ class EMail(object):
                 "body": None,
             }
 
-            resp, received_list = self.mailbox.select("inbox")
-            if resp == "OK":
-                last_msg_num = received_list[0].split()[-1]
-                for num in [last_msg_num]:
-                    rv, data = m.mailbox.fetch(num, '(RFC822)')
-                    if rv != 'OK':
-                        print "ERROR getting message", num
-                        break
-
+            if num is not None:
+                rv, data = self.mailbox.fetch(num, '(RFC822)')
+                if rv == 'OK':
                     msg = email.message_from_string(data[0][1])
                     decode = email.header.decode_header(msg['Subject'])[0]
                     subject = make_unicode(decode[0])
@@ -173,6 +215,13 @@ class EMail(object):
                                 _ = part.get_payload(decode=True)
                                 if len(_) > 0:
                                     body.append(_)
+                            elif part.get_content_type() == "text/html":
+                                # TODO: This is a workaround for
+                                # mail bodies without 'text/plain' section
+                                if len(body) == 0:
+                                    _ = part.get_payload(decode=True)
+                                    if len(_) > 0:
+                                        body.append(_)
                             else:
                                 continue
 
@@ -199,10 +248,6 @@ class AktosTelemetryMailBase(EMail):
             </p>
             """
 
-    def prepare(self):
-        self.password = "r1D84N9HxSdzv0Hrx29k1OUY2NnvjJFBpkX0XNxONto="
-
-
 
 if __name__ == "__main__":
     from aktos_dcs import *
@@ -213,25 +258,33 @@ if __name__ == "__main__":
         def action(self):
             print "Started test action, ", time.time()
             while True:
-                print("Hello!, %d" % time.time())
+                print("Hello!, %f" % time.time())
                 sleep(0.1)
 
     TestGevent()
 
     # Example Usage:
     class TelemetryMail(AktosTelemetryMailBase):
-        pass
-
+        def prepare(self):
+            self.password = "r1D84N9HxSdzv0Hrx29k1OUY2NnvjJFBpkX0XNxONto="
 
     m = TelemetryMail()
     print("sending, %f" % time.time())
-    m.send_mail(["ceremcem@ceremcem.net", ""], "test-subject-çalışöğün-1234", "çalışöğün22", ["./cca_signal.py"])
-    recv = m.get_last_mail()
 
+    # send a mail
+    recipients = ["ceremcem@ceremcem.net", m.username]
+    subject = "test-subject-çalışöğün-1234"
+    content = "çalışöğün22"
+    attachments = ["./cca_signal.py"]
+    m.send_mail(recipients, subject, content, attachments)
+
+    # get last mail
+    print "Getting mail (blocker)"
+    recv = m.get_last_mail()
     for k, v in recv.iteritems():
         print "Entry:", k, "::", v
 
-    print "last mail is %d seconds ago", time.time() - recv["unix_timestamp"]
+    print "last mail is %d seconds ago" % (time.time() - recv["unix_timestamp"])
 
     print("finished: %f" % time.time())
     wait_all()
