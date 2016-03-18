@@ -5,7 +5,8 @@ gevent.monkey.patch_all()
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
+from email.utils import formatdate, formataddr
+from email.header import Header
 from email import Encoders
 import smtplib
 import imaplib
@@ -33,6 +34,7 @@ class EMail(object):
             self.password = None
             self.smtp_server = None
             self.imap_server = None
+            self.display_name = None
 
             self.prepare_base()
             self.prepare()
@@ -47,6 +49,7 @@ class EMail(object):
             self.imap_port = self.imap_port or default_imap_port
             self.smtp_port = self.smtp_port or default_smtp_port
             self.mail_from = self.mail_from or self.username
+            self.display_name = self.display_name or self.mail_from
 
             self.smtp_session = None
 
@@ -134,7 +137,8 @@ class EMail(object):
                 mailto = ', '.join(mailto)
 
             msg = MIMEMultipart()
-            msg['From'] = self.mail_from
+
+            msg['From'] = author = formataddr((str(Header(make_unicode(self.display_name), 'utf-8')), self.mail_from))
             msg['To'] = mailto
             msg['Date'] = formatdate(localtime=True)
             msg['Subject'] = subject
@@ -241,6 +245,7 @@ class AktosTelemetryMailBase(EMail):
                 </a>
             </p>
             """
+        self.display_name = "Aktos Telemetry Subsystem"
 
 
 if __name__ == "__main__":
