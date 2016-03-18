@@ -30,6 +30,11 @@ class EMailActor(Actor):
         while True:
 
             mail_index = self.mail_client.get_last_mail_index()
+
+            if self.last_mail_index < 0:
+                # actor started just now, take it as a reference point
+                self.last_mail_index = mail_index
+                
             if self.last_mail_index < mail_index:
                 mail = self.mail_client.get_mail(mail_index)
                 if mail["from"] is not None:
