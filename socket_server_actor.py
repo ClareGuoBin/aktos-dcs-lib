@@ -3,9 +3,11 @@ __author__ = 'ceremcem'
 from aktos_dcs import *
 import gevent
 from gevent.server import StreamServer
+from gevent.server import DatagramServer
 
 
-class SocketHandlerActor(Actor):
+
+class TcpHandlerActor(Actor):
     def __init__(self, socket, address):
         Actor.__init__(self)
         self.socket, self.address = socket, address
@@ -45,31 +47,17 @@ class SocketHandlerActor(Actor):
         self.socket_file.close()
 
 
-class SocketServerActor(Actor):
-    def __init__(self, address="0.0.0.0", port=22334, handler=SocketHandlerActor):
+class TcpServerActor(Actor):
+    def __init__(self, address="0.0.0.0", port=22334, handler=TcpHandlerActor):
         Actor.__init__(self)
         self.address, self.port = address, port
         self.server = StreamServer((self.address, self.port), handler) # creates a new server
         self.server.start()  # this is blocker, as intended
 
-if __name__ == "__main__":
-    class TestHandler(SocketHandlerActor):
-        def on_connect(self):
-            print "there is a connection!"
 
-        def socket_read(self, data):
-            print "I got following data: ", data
+class UdpServer(DatagramServer):
 
-        def action(self):
-            i = 0
-            while True:
-                print "sending test data..."
-                self.socket_send("naber... (%d)\n" % i)
-                i += 1
-                sleep(2)
-
-    #SocketServerActor(address='0.0.0.0', port=22334)
-    SocketServerActor(address='0.0.0.0', port=22334, handler=TestHandler)
-    wait_all()
-
+    def handle(self, data, address): # pylint:disable=method-hidden
+        print('%s: got %r' % (address[0], data))
+        self.socket.sendto(('Received %s bytes' % len(data)).encode('utf-8'), address)
 

@@ -9,7 +9,7 @@ class SocketException(Exception):
     pass
 
 
-class SocketClient(object):
+class TcpClient(object):
     def __init__(self, host='localhost', port=80, receiver=None):
         object.__init__(self)
         self.host = host
@@ -70,30 +70,33 @@ class SocketClient(object):
             prev_chunk_len = len(self.chunks)
 
     def socket_send(self, data):
-        self.client_socket.send(data)
+        gevent.spawn(self.__socket_send, data)
+
+
+
+
+    def __socket_send(self, data):
+        with Timeout(2, False):
+            while True:
+                try:
+                    self.client_socket.send(data)
+                    break
+                except:
+                    self.try_to_connect()
 
     def cleanup(self):
         self.client_socket.close()
 
 
-class SocketClientActor(Actor):
-    def __init__(self, host='localhost', port=80):
-        Actor.__init__(self)
-        self.host = host
-        self.port = port
-        self.socket_client = SocketClient(host, port, self.broadcast_data)
 
-    def broadcast_data(self, data):
-        self.send_SocketMessage(host=self.host, port=self.port, data=data)
 
-    def handle_SocketMessage(self, msg):
-        self.socket_client.socket_send(pack(msg))
-
-if __name__ == "__main__":
-    def handler(data):
-        print "naber", data
-
-    x = SocketClient(host="localhost", port=11223, receiver=handler)
-
-    wait_all()
-
+class UdpClient(object):
+    def __init__(self):
+        address = ('localhost', 9000)
+        message = "test selam"
+        sock = socket.socket(type=socket.SOCK_DGRAM)
+        sock.connect(address)
+        print('Sending %s bytes to %s:%s' % ((len(message), ) + address))
+        sock.send(message.encode())
+        data, address = sock.recvfrom(8192)
+        print('%s:%s: got %r' % (address + (data, )))
