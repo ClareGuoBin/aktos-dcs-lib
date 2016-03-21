@@ -4,62 +4,72 @@ from aktos_dcs import *
 import gevent
 from gevent.server import StreamServer
 
+
 class SocketHandlerActor(Actor):
     def __init__(self, socket, address):
         Actor.__init__(self)
         self.socket, self.address = socket, address
-        self.is_connected = True  # TODO: set this variable somehow
+        self.is_connected = True
         self.socket_file = socket.makefile(mode='rwb')
-        self.client_id = ':'.join(map(str, self.address))
-        gevent.spawn(self.socket_listener)
+        self.client_id = socket.getpeername()
+        gevent.spawn(self.__socket_listener__)
+        self.on_connect()
 
-    def socket_listener(self):
+    def on_connect(self):
+        print "client connected: ", self.client_id
+
+
+    def __socket_listener__(self):
         while self.is_connected:
             received = self.socket_file.readline()
             if not received:
                 self.is_connected = False
                 break
-            #print "received: ", received
-            self.send({'SocketServerMessage': {'data': received, 'client': self.client_id}})
+            gevent.spawn(self.socket_read, received)
+        self.kill()
+
+    def socket_read(self, data):
+        print "received: ", data
+
 
     def socket_send(self, data):
         try:
             self.socket.sendall(data)
         except:
             self.is_connected = False
+            self.kill()
 
-    def handle_SocketServerSendMessage(self, msg_raw):
-        msg = get_msg_body(msg_raw)
-
-        if msg['client'] == self.client_id or msg['client'] in ['all', 'broadcast']:
-            self.socket_send(msg['data'])
 
     def cleanup(self):
-        print "client disconnected..."
+        print "client %s:%s disconnected..." % self.client_id
         self.socket_file.close()
 
 
 class SocketServerActor(Actor):
-    def __init__(self, address, port):
+    def __init__(self, address="0.0.0.0", port=22334, handler=SocketHandlerActor):
         Actor.__init__(self)
         self.address, self.port = address, port
-        self.server = StreamServer((self.address, self.port), SocketHandlerActor) # creates a new server
-        self.server.start()
+        self.server = StreamServer((self.address, self.port), handler) # creates a new server
+        self.server.start()  # this is blocker, as intended
 
 if __name__ == "__main__":
-    class TestSocketServerClient(Actor):
+    class TestHandler(SocketHandlerActor):
+        def on_connect(self):
+            print "there is a connection!"
+
+        def socket_read(self, data):
+            print "I got following data: ", data
+
         def action(self):
+            i = 0
             while True:
-                self.send({'SocketServerSendMessage': {'data': "test socket server sending msg\n", "client": "all"}})
+                print "sending test data..."
+                self.socket_send("naber... (%d)\n" % i)
+                i += 1
                 sleep(2)
 
-        def handle_SocketServerMessage(self, msg_raw):
-            msg = get_msg_body(msg_raw)
-
-            print "client sent data: ", msg["data"]
-
-    SocketServerActor('0.0.0.0', 1234)
-    TestSocketServerClient()
+    #SocketServerActor(address='0.0.0.0', port=22334)
+    SocketServerActor(address='0.0.0.0', port=22334, handler=TestHandler)
     wait_all()
 
 

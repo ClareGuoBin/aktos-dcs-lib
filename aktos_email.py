@@ -11,11 +11,10 @@ from email import Encoders
 import smtplib
 import imaplib
 import gevent
-from aktos_dcs.unicode_tools import *
+from aktos_dcs import *
 import email
 import email.header
 import os
-from aktos_dcs import Barrier
 import time
 
 class EMail(object):
