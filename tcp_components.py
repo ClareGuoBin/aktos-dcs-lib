@@ -64,6 +64,7 @@ class TcpClient(object):
         self.try_to_connect()
         gevent.spawn(self.socket_listener)
         gevent.spawn(self.recv_data_timeout)
+        self.msg_max_age = 2  # seconds
 
 
 
@@ -118,7 +119,7 @@ class TcpClient(object):
         gevent.spawn(self.__socket_send, data)
 
     def __socket_send(self, data):
-        with Timeout(2, False):
+        with Timeout(self.msg_max_age, False):
             while True:
                 try:
                     self.client_socket.send(data)

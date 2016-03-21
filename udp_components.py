@@ -27,8 +27,8 @@ class UdpClient(object):
                 data, address = self.client_socket.recvfrom(8192)
                 print "Received: ", data, address
             except :
-                print "NOT RECEIVED!!!"
-                #self.try_to_connect()
+                gevent.sleep(0.1)
+
 
     def try_to_connect(self):
         self.client_socket = socket.socket(type=socket.SOCK_DGRAM)
@@ -48,17 +48,7 @@ class UdpClient(object):
 
 
     def socket_write(self, data):
-        gevent.spawn(self.__socket_send, data)
-
-    def __socket_send(self, data):
-        with Timeout(2, False):
-            while True:
-                try:
-                    self.client_socket.send(data)
-                    break
-                except:
-                    print "not connected, waiting..."
-                    gevent.sleep(1)
+        self.client_socket.send(data)
 
     def cleanup(self):
         self.client_socket.close()
@@ -67,7 +57,7 @@ class UdpClient(object):
 
 
 class UdpServerActor(Actor):
-    def __init__(self, address="0.0.0.0", port=22334):
+    def __init__(self, address="0.0.0.0", port=5011):
         Actor.__init__(self)
         self.address, self.port = address, port
         self.server = DatagramServer((self.address, self.port), self.socket_read) # creates a new server
