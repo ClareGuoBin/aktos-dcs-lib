@@ -47,7 +47,7 @@ class UdpClient(object):
                 i = max_period if i > max_period else i
 
 
-    def socket_send(self, data):
+    def socket_write(self, data):
         gevent.spawn(self.__socket_send, data)
 
     def __socket_send(self, data):
@@ -65,55 +65,26 @@ class UdpClient(object):
 
 
 
-# Server components
 
-class UdpHandlerActor(Actor):
-    def __init__(self, socket, address):
+class UdpServerActor(Actor):
+    def __init__(self, address="0.0.0.0", port=22334):
         Actor.__init__(self)
-        self.socket, self.address = socket, address
-        self.socket_file = socket.makefile(mode='rwb')
-        self.client_id = socket.getpeername()
-        gevent.spawn(self.__socket_listener__)
-        self.on_connect()
-        self.default_target = None
+        self.address, self.port = address, port
+        self.server = DatagramServer((self.address, self.port), self.socket_read) # creates a new server
+        gevent.spawn(self.server.serve_forever)
 
-    def on_connect(self):
-        print "client connected: ", self.client_id
-
-
-    def __socket_listener__(self):
-        while self.is_connected:
-            received = self.socket_file.readline()
-            if not received:
-                self.is_connected = False
-                break
-            gevent.spawn(self.socket_read, received)
-        self.kill()
-
-    def socket_read(self, data):
-        print "received: ", data
-
+    def socket_read(self, data, address):
+        print "server actor received", data, address
+        print "server makes echo: "
+        self.socket_write(data, address)
 
     def socket_write(self, data, target=None):
         if target is None:
             print "target is empty!"
         else:
             try:
-                self.socket.sendto(data, target)
-            except:
-                print "didn't write to socket.."
+                self.server.sendto(data, target)
+            except Exception as e:
+                print "didn't write to socket..", e
                 pass
-
-
-    def cleanup(self):
-        print "client %s:%s disconnected..." % self.client_id
-        self.socket_file.close()
-
-
-class UdpServerActor(Actor):
-    def __init__(self, address="0.0.0.0", port=22334, handler=UdpHandlerActor):
-        Actor.__init__(self)
-        self.address, self.port = address, port
-        self.server = DatagramServer((self.address, self.port), handler) # creates a new server
-        self.server.serve_forever()  # this is blocker, as intended
 

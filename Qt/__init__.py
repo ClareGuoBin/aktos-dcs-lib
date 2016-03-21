@@ -10,7 +10,7 @@ Detects either PySide or PyQt.
 """
 import sys
 import logging
-from aktos_dcs import sleep
+from gevent import sleep
 
 
 __all__ = [
