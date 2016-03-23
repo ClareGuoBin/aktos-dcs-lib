@@ -54,8 +54,11 @@ class DatabaseActor(Actor):
                     break 
             except Exception as e:
                 print "INFO: CONNECTION MIGHT BE LOST, RETRYING... (count: %d)" % self.conn_retry_count , e.message
-                self.connect(conn_params = self.conn_params)
-                self.conn_retry_count += 1
+                try:
+                    self.conn_retry_count += 1
+                    self.connect(conn_params = self.conn_params)
+                except Exception as e:
+                    print "WARNING: Couldn't connect, forced retrying!!!"
             sleep(0.1)
 
     def run_query(self, query):
