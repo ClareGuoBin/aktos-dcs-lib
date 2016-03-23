@@ -4,18 +4,20 @@ from gevent.server import StreamServer
 from gevent import (socket, Timeout)
 from aktos_exceptions import SocketException
 
+import traceback
 
 class TcpHandlerActor(Actor):
     def __init__(self, socket, address):
         Actor.__init__(self)
-        self.socket, self.address = socket, address
-        self.is_connected = True
-        self.socket_file = socket.makefile(mode='rwb')
-        self.client_id = socket.getpeername()
-        gevent.spawn(self.__socket_listener__)
-        self.on_connect()
-	self.timeout = 3  # seconds 
-	socket.settimeout(self.timeout)
+	try:
+	    self.socket, self.address = socket, address
+	    self.socket_file = socket.makefile(mode='rwb')
+            self.client_id = socket.getpeername()
+            self.__listener_g__ = gevent.spawn(self.__socket_listener__)
+            self.on_connect()
+        except:
+            traceback.print_exc()
+            raise
 
     def on_connect(self):
         print "client connected: ", self.client_id
@@ -36,12 +38,15 @@ class TcpHandlerActor(Actor):
 
     def socket_write(self, data):
         try:
-            self.socket.sendall(data)
+            self.socket_file.write(data)
+            self.socket_file.flush()
         except:
-            self.is_connected = False
+            # Debug
+            #traceback.print_exc()
             self.kill()
 
     def cleanup(self):
+        self.__listener_g__.kill()
         self.on_disconnect()
         self.socket_file.close()
 
