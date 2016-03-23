@@ -71,21 +71,27 @@ class EMail(object):
 
 
         def login(self):
-            # login to imap session
-            self.mailbox = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
-            self.mailbox.login(self.username, self.password)
+            while True:
+                try:
+                    # login to imap session
+                    self.mailbox = imaplib.IMAP4_SSL(self.imap_server, self.imap_port)
+                    self.mailbox.login(self.username, self.password)
 
-            # login to smtp session
-            server = smtplib.SMTP(self.smtp_server, port=self.smtp_port)
-            server.ehlo()
-            # use encrypted SSL mode
-            server.starttls()
-            # to make starttls work
-            server.ehlo()
-            server.login(self.username, self.password)
-            server.set_debuglevel(self.debug)
+                    # login to smtp session
+                    server = smtplib.SMTP(self.smtp_server, port=self.smtp_port)
+                    server.ehlo()
+                    # use encrypted SSL mode
+                    server.starttls()
+                    # to make starttls work
+                    server.ehlo()
+                    server.login(self.username, self.password)
+                    server.set_debuglevel(self.debug)
 
-            self.smtp_session = server
+                    self.smtp_session = server
+
+                    break
+                except Exception as e:
+                    print "WARNING: Login Failed! ", e.message
 
         def quit(self):
             self.smtp_session.quit()
