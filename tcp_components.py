@@ -14,16 +14,19 @@ class TcpHandlerActor(Actor):
         self.client_id = socket.getpeername()
         gevent.spawn(self.__socket_listener__)
         self.on_connect()
+	self.timeout = 3  # seconds 
+	socket.settimeout(self.timeout)
 
     def on_connect(self):
         print "client connected: ", self.client_id
 
+    def on_disconnect(self):
+        print "client disconnected: ", self.client_id
 
     def __socket_listener__(self):
-        while self.is_connected:
+        while True:
             received = self.socket_file.readline()
-            if not received:
-                self.is_connected = False
+            if received == '':
                 break
             gevent.spawn(self.socket_read, received)
         self.kill()
@@ -38,9 +41,8 @@ class TcpHandlerActor(Actor):
             self.is_connected = False
             self.kill()
 
-
     def cleanup(self):
-        print "client %s:%s disconnected..." % self.client_id
+        self.on_disconnect()
         self.socket_file.close()
 
 
@@ -49,7 +51,7 @@ class TcpServerActor(Actor):
         Actor.__init__(self)
         self.address, self.port = address, port
         self.server = StreamServer((self.address, self.port), handler) # creates a new server
-        self.server.start()  # this is blocker, as intended
+        gevent.spawn(self.server.serve_forever)
 
 
 class TcpClient(object):
