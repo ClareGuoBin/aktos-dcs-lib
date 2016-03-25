@@ -86,6 +86,8 @@ class TcpClient(object):
         self.send_queue = Queue()
         gevent.spawn(self.__send_queue_worker__)
 
+        self.line_ending = "\n"
+
 
 
     def socket_listener(self):
@@ -102,6 +104,7 @@ class TcpClient(object):
                 self.try_to_connect()
 
     def try_to_connect(self):
+        print "Trying to connect"
         # use a new socket when attempting to reconnect!
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -146,6 +149,9 @@ class TcpClient(object):
             while timestamp + self.msg_max_age > time.time():
                 try:
                     self.client_socket.send(data, timeout=0)
+                    if data[-len(self.line_ending)] != self.line_ending:
+                        self.client_socket.send(self.line_ending, timeout=0)
+
                     break
                 except:
                     self.try_to_connect()
