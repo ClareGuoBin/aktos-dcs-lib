@@ -3,16 +3,19 @@ import gevent
 from gevent.server import StreamServer
 from gevent import (socket, Timeout)
 from aktos_exceptions import SocketException
+from gevent.queue import Queue
+import struct
+from gevent import GreenletExit
 
 import traceback
 
 class TcpHandlerActor(Actor):
     def __init__(self, socket, address):
         Actor.__init__(self)
-	try:
-	    self.socket, self.address = socket, address
-	    self.socket_file = socket.makefile(mode='rwb')
-            self.client_id = socket.getpeername()
+        try:
+            self.socket, self.address = socket, address
+            self.socket_file = self.socket.makefile(mode='rwb')
+            self.client_id = self.socket.getpeername()
             self.__listener_g__ = gevent.spawn(self.__socket_listener__)
             self.on_connect()
         except:
@@ -46,8 +49,11 @@ class TcpHandlerActor(Actor):
             self.kill()
 
     def cleanup(self):
-        self.__listener_g__.kill()
         self.on_disconnect()
+        try:
+            self.__listener_g__.kill()
+        except GreenletExit:
+            pass
         self.socket_file.close()
 
 
@@ -58,6 +64,11 @@ class TcpServerActor(Actor):
         self.server = StreamServer((self.address, self.port), handler) # creates a new server
         gevent.spawn(self.server.serve_forever)
 
+
+# LastStableIsImportant
+#   PreviousIsUseless
+#   PreviousIsGoodToKnow
+#   PreviousIsMandatory
 
 class TcpClient(object):
     def __init__(self, host='localhost', port=80, receiver=None):
@@ -72,6 +83,8 @@ class TcpClient(object):
         gevent.spawn(self.socket_listener)
         gevent.spawn(self.recv_data_timeout)
         self.msg_max_age = 2  # seconds
+        self.send_queue = Queue()
+        gevent.spawn(self.__send_queue_worker__)
 
 
 
@@ -80,21 +93,23 @@ class TcpClient(object):
         while True:
             try:
                 data = self.client_socket.recv(2048)
-                self.chunks.append(data)
                 #print "socket listener got data: ", repr(data)
                 if data == '':
                     raise SocketException("Disconnected, trying reconnecting...")
-            except :
+                else:
+                    self.chunks.append(data)
+            except:
                 self.try_to_connect()
 
     def try_to_connect(self):
+        # use a new socket when attempting to reconnect!
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        i = 0
+        i = 2
         while True:
             try:
-                self.client_socket.connect((self.host, self.port))
-                print "Connected..."
+                a = self.client_socket.connect((self.host, self.port))
+                print "Connected...", a
                 break
             except:
                 print "Retrying connecting..."
@@ -123,16 +138,18 @@ class TcpClient(object):
             prev_chunk_len = len(self.chunks)
 
     def socket_write(self, data):
-        gevent.spawn(self.__socket_send, data)
+        self.send_queue.put((data, time.time()))
 
-    def __socket_send(self, data):
-        with Timeout(self.msg_max_age, False):
-            while True:
+    def __send_queue_worker__(self):
+        while True:
+            data, timestamp = self.send_queue.get()
+            while timestamp + self.msg_max_age > time.time():
                 try:
-                    self.client_socket.send(data)
+                    self.client_socket.send(data, timeout=0)
                     break
                 except:
                     self.try_to_connect()
+
 
     def cleanup(self):
         self.client_socket.close()
