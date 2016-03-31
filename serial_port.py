@@ -21,39 +21,16 @@ class SerialPortReader(Actor):
         gevent.spawn(self.try_to_connect)
 
     def prepare(self):
-        self.ser.baudrate = 115200
-        print "started reading serial port..."
-        print "-------------------------------"
-        print self.ser
-
+        pass
 
     def on_connect(self):
-        print "Connected..."
-
-        cmd = """import network            #0
-wlan = network.WLAN(network.STA_IF)        #1
-wlan.active(True)                          #2
-wlan.scan()                                #3
-wlan.isconnected()                         #4
-wlan.connect("aea", "084DA789BF")          #5
-wlan.isconnected()"""                      #6
-
-        cmd_list = cmd.split("\n")
-        sleep(5)
-        for i in range(len(cmd_list)):
-            self.ser_write(cmd_list[i]+"\r\n")
-            if i == 3:
-                sleep(5)
-            elif i == 5:
-                sleep(10)
-            else:
-                sleep(0.5)
+        pass
 
     def on_disconnect(self):
         pass
 
     def serial_read(self, data):
-        print '::' + data
+        pass
 
     def try_to_connect(self):
         while True:
@@ -97,16 +74,17 @@ wlan.isconnected()"""                      #6
                     self.connection_made.wait()
 
     def ser_write(self, data):
-        while True:
-            try:
-                self.ser.write(data)
-                break
-            except:
+        with Timeout(1, False):
+            while True:
                 try:
-                    assert self.ser.is_open
+                    self.ser.write(data)
+                    break
                 except:
-                    self.make_connection.go()
-                    self.connection_made.wait()
+                    try:
+                        assert self.ser.is_open
+                    except:
+                        self.make_connection.go()
+                        self.connection_made.wait()
 
     def cleanup(self):
         try:
@@ -116,5 +94,35 @@ wlan.isconnected()"""                      #6
                     
 
 if __name__ == "__main__":
-    SerialPortReader()
+    import sys
+
+    class TestMicropython(SerialPortReader):
+        def prepare(self):
+            print "started reading serial port..."
+            print "-------------------------------"
+            print self.ser
+
+        def send_cmd(self, cmd, s=0.5):
+            self.ser_write(cmd + "\r\n")
+            sleep(s)
+
+        def on_connect(self):
+            print "Connected..."
+            sleep(5)
+            self.send_cmd("""import network""")
+            self.send_cmd("""wlan = network.WLAN(network.STA_IF)""")
+            self.send_cmd("""wlan.active(True)""")
+            self.send_cmd("""wlan.scan()""", 5)
+            self.send_cmd("""wlan.isconnected()""")
+            self.send_cmd("""wlan.connect("aea", "084DA789BF")""", 10)
+            self.send_cmd("""wlan.isconnected()""")
+            self.send_cmd("""wlan.isconnected()""", 2)
+            self.send_cmd("""wlan.isconnected()""", 2)
+            self.send_cmd("""wlan.isconnected()""", 2)
+
+        def serial_read(self, data):
+            #print 'Serial Port Received: ', data
+            sys.stdout.write(data)
+            
+    TestMicropython(port="/dev/ttyUSB0", baud=115200)
     wait_all()
