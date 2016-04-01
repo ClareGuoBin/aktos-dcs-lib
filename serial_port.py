@@ -65,6 +65,7 @@ class SerialPortReader(Actor):
                         str_list = []
                         
                         # use received data
+                        #print "DEBUG: RECEIVED: ", repr(received)
                         gevent.spawn(self.serial_read, received)
             except:
                 try:
@@ -73,7 +74,7 @@ class SerialPortReader(Actor):
                     self.make_connection.go()
                     self.connection_made.wait()
 
-    def ser_write(self, data):
+    def serial_write(self, data):
         with Timeout(1, False):
             while True:
                 try:
