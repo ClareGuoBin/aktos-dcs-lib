@@ -18,7 +18,9 @@ class SerialPortReader(Actor):
         self.make_connection = Barrier()
         self.connection_made = Barrier()
         Actor.__init__(self)
+        self.first_run = True
         gevent.spawn(self.try_to_connect)
+
 
     def prepare(self):
         pass
@@ -32,21 +34,32 @@ class SerialPortReader(Actor):
     def serial_read(self, data):
         pass
 
+    def on_connecting(self):
+        pass
+
     def try_to_connect(self):
         while True:
             self.make_connection.wait()
-            gevent.spawn(self.on_disconnect)
+            if not self.first_run:
+                gevent.spawn(self.on_disconnect)
             try:
                 self.ser.close()
             except:
                 pass
-            print "Trying to connect..."
+            connecting = None
+            if not self.first_run:
+                connecting = gevent.spawn(self.on_connecting)
             while True:
                 try:
                     self.ser.open()
                     self.connection_made.go()
                     self.make_connection.barrier_event.clear()
                     gevent.spawn(self.on_connect)
+                    try:
+                        connecting.kill()
+                    except:
+                        pass
+                    self.first_run = False
                     break
                 except:
                     sleep(0.1)
