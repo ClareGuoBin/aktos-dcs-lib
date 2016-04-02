@@ -24,8 +24,10 @@ class SerialPortReader(Actor):
         self.line_endings = "\r\n"
         self.read_handlers = [self.serial_read]
         self.io_prompt_started = False
-        gevent.spawn(self.try_to_connect)
-        gevent.spawn(self.__listener__)
+
+        self.additional_greenlets = []
+        self.additional_greenlets.append(gevent.spawn(self.try_to_connect))
+        self.additional_greenlets.append(gevent.spawn(self.__listener__))
 
 
     def prepare(self):
@@ -102,7 +104,9 @@ class SerialPortReader(Actor):
         self.read_handlers.append(handler)
 
     def send_cmd(self, cmd, s=0.0):
-        self.serial_write(cmd + self.line_endings)
+        _ = cmd + self.line_endings
+        #print "DEBUG: SENDING CMD: ", repr(_)
+        self.serial_write(_)
         sleep(s)
 
     def serial_write(self, data):
@@ -122,7 +126,7 @@ class SerialPortReader(Actor):
         if not self.io_prompt_started:
             self.io_prompt_started = True
             self.add_read_handler(self.prompt_read)
-            gevent.spawn(self.prompt_write)
+            self.additional_greenlets.append(gevent.spawn(self.prompt_write))
         else:
             print "WARNING: Prompt already started..."
 
@@ -150,6 +154,11 @@ class SerialPortReader(Actor):
             self.send_cmd(stripped)
 
     def cleanup(self):
+        for i in self.additional_greenlets:
+            try:
+                i.kill()
+            except:
+                pass
         try:
             self.ser.close()
         except:
