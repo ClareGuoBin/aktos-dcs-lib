@@ -1,10 +1,11 @@
 __author__ = 'ceremcem'
 
 from aktos_dcs import *
+from gevent_raw_input import raw_input
 import gevent 
 from gevent import Timeout
 import serial
-
+import sys
 
 class SerialPortReader(Actor):
     def __init__(self, port="/dev/ttyUSB0", baud=9600, format="8N1"):
@@ -19,7 +20,12 @@ class SerialPortReader(Actor):
         self.connection_made = Barrier()
         Actor.__init__(self)
         self.first_run = True
+        self.last_input = None
+        self.line_endings = "\r\n"
+        self.read_handlers = [self.serial_read]
+        self.io_prompt_started = False
         gevent.spawn(self.try_to_connect)
+        gevent.spawn(self.__listener__)
 
 
     def prepare(self):
@@ -64,7 +70,7 @@ class SerialPortReader(Actor):
                 except:
                     sleep(0.1)
 
-    def action(self):
+    def __listener__(self):
         str_list = []
         while True:
             try:
@@ -79,13 +85,18 @@ class SerialPortReader(Actor):
                         
                         # use received data
                         #print "DEBUG: RECEIVED: ", repr(received)
-                        gevent.spawn(self.serial_read, received)
+                        for i in self.read_handlers:
+                            gevent.spawn(i, received)
+
             except:
                 try:
                     assert self.ser.is_open
                 except:
                     self.make_connection.go()
                     self.connection_made.wait()
+
+    def add_read_handler(self, handler):
+        self.read_handlers.append(handler)
 
     def serial_write(self, data):
         with Timeout(1, False):
@@ -99,6 +110,37 @@ class SerialPortReader(Actor):
                     except:
                         self.make_connection.go()
                         self.connection_made.wait()
+
+    def start_io_prompt(self):
+        if not self.io_prompt_started:
+            self.io_prompt_started = True
+            self.add_read_handler(self.prompt_read)
+            gevent.spawn(self.prompt_write)
+        else:
+            print "WARNING: Prompt already started..."
+
+
+
+    def prompt_read(self, data):
+        echo_index = 0
+        if self.last_input is not None:
+            if self.last_input[-1] == "\n":
+                self.last_input = self.last_input[:-1]  # remove \n char
+
+            echo_index = data.find(self.last_input)
+            if echo_index > -1:
+                echo_index += len(self.last_input)
+                echo_index += len(self.line_endings)  # remove \r\n at the end
+            self.last_input = None
+        clear_data = data[echo_index:]
+        sys.stdout.write(clear_data)
+        sys.stdout.flush()
+
+    def prompt_write(self):
+        while True:
+            self.last_input = raw_input()
+            self.send_cmd(self.last_input)
+            sleep(0)
 
     def cleanup(self):
         try:
