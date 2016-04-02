@@ -139,7 +139,8 @@ class SerialPortReader(Actor):
     def prompt_write(self):
         while True:
             self.last_input = raw_input()
-            self.send_cmd(self.last_input)
+            stripped = self.last_input[:-1]  # remove "\n" at the end
+            self.serial_write(stripped + self.line_endings)
             sleep(0)
 
     def cleanup(self):
