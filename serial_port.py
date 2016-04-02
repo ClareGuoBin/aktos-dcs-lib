@@ -68,6 +68,9 @@ class SerialPortReader(Actor):
                     self.first_run = False
                     break
                 except:
+                    if connecting is None:
+                        connecting = gevent.spawn(self.on_connecting)
+
                     sleep(0.1)
 
     def __listener__(self):
