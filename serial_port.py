@@ -101,6 +101,10 @@ class SerialPortReader(Actor):
     def add_read_handler(self, handler):
         self.read_handlers.append(handler)
 
+    def send_cmd(self, cmd, s=0.0):
+        self.serial_write(cmd + self.line_endings)
+        sleep(s)
+
     def serial_write(self, data):
         with Timeout(1, False):
             while True:
@@ -143,8 +147,7 @@ class SerialPortReader(Actor):
         while True:
             self.last_input = raw_input()
             stripped = self.last_input[:-1]  # remove "\n" at the end
-            self.serial_write(stripped + self.line_endings)
-            sleep(0)
+            self.send_cmd(stripped)
 
     def cleanup(self):
         try:
