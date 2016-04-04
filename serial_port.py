@@ -1,11 +1,11 @@
 __author__ = 'ceremcem'
 
 from aktos_dcs import *
-from gevent_raw_input import raw_input
-import gevent 
+from io_prompt import IoPrompt
+import gevent
 from gevent import Timeout
 import serial
-import sys
+
 
 class SerialPortReader(Actor):
     def __init__(self, port="/dev/ttyUSB0", baud=9600, format="8N1"):
@@ -18,14 +18,12 @@ class SerialPortReader(Actor):
         self.ser.timeout = 0
         self.make_connection = Barrier()
         self.connection_made = Barrier()
-        Actor.__init__(self)
-        self.first_run = True
-        self.last_input = None
         self.line_endings = "\r\n"
         self.read_handlers = [self.serial_read]
-        self.io_prompt_started = False
-
+        self.first_run = True
         self.additional_greenlets = []
+
+        Actor.__init__(self)
         self.additional_greenlets.append(gevent.spawn(self.try_to_connect))
         self.additional_greenlets.append(gevent.spawn(self.__listener__))
 
@@ -123,35 +121,11 @@ class SerialPortReader(Actor):
                         self.connection_made.wait()
 
     def start_io_prompt(self):
-        if not self.io_prompt_started:
-            self.io_prompt_started = True
-            self.add_read_handler(self.prompt_read)
-            self.additional_greenlets.append(gevent.spawn(self.prompt_write))
-        else:
-            print "WARNING: Prompt already started..."
+        self.io_prompt = IoPrompt()
+        self.io_prompt.send_cmd = self.send_cmd
+        self.read_handlers.append(self.io_prompt.prompt_read)
+        self.io_prompt.start_io_prompt()
 
-
-
-    def prompt_read(self, data):
-        echo_index = 0
-        if self.last_input is not None:
-            if self.last_input[-1] == "\n":
-                self.last_input = self.last_input[:-1]  # remove \n char
-
-            echo_index = data.find(self.last_input)
-            if echo_index > -1:
-                echo_index += len(self.last_input)
-                echo_index += len(self.line_endings)  # remove \r\n at the end
-            self.last_input = None
-        clear_data = data[echo_index:]
-        sys.stdout.write(clear_data)
-        sys.stdout.flush()
-
-    def prompt_write(self):
-        while True:
-            self.last_input = raw_input()
-            stripped = self.last_input[:-1]  # remove "\n" at the end
-            self.send_cmd(stripped)
 
     def cleanup(self):
         for i in self.additional_greenlets:
@@ -159,6 +133,8 @@ class SerialPortReader(Actor):
                 i.kill()
             except:
                 pass
+
+        self.io_prompt.kill()
         try:
             self.ser.close()
         except:
