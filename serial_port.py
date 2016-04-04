@@ -80,7 +80,9 @@ class SerialPortReader(Actor):
         while True:
             try:
                 sleep(0.01) # amount of time between packages
-                nextchar = self.ser.read(self.ser.inWaiting())
+                nextchar = None
+                with Timeout(1, Exception):
+                    nextchar = self.ser.read(self.ser.inWaiting())
                 if nextchar:
                     str_list.append(nextchar)
                 else:
@@ -93,7 +95,9 @@ class SerialPortReader(Actor):
                         for i in self.read_handlers:
                             gevent.spawn(i, received)
 
-            except:
+            except IOError:
+                self.ser.close()
+            except Exception, e:
                 try:
                     assert self.ser.is_open
                 except:
