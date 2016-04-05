@@ -46,10 +46,10 @@ class IoPrompt(Actor):
                         clear_data = clear_data[1:]
 
             sys.stdout.write(clear_data)
-            sys.stdout.flush()
         else:
             sys.stdout.write(data)
-            sys.stdout.flush()
+
+        sys.stdout.flush()
 
     def prompt_write(self):
         while True:
