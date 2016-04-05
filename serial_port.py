@@ -82,28 +82,24 @@ class SerialPortReader(Actor):
         """
         frame_interval = 0.1
         str_list = []
+        c = ''
         while True:
-            try:
-                with Timeout(frame_interval):
-                    while True:
+            with Timeout(frame_interval, False):
+                while True:
+                    try:
                         c = self.ser.read()
-                        str_list.append(c)
-                        if c == "\n" or c == '':
-                            break
-                received = ''.join(str_list)
-                str_list = []
-                if received:
-                    for i in self.read_handlers:
-                        gevent.spawn(i, received)
-            except IOError:
-                self.ser.close()
-            except:
-                try:
-                    assert self.ser.is_open
-                except:
-                    self.make_connection.go()
-                    self.connection_made.wait()
-
+                    except IOError:
+                        self.ser.close()
+                        self.make_connection.go()
+                        self.connection_made.wait()
+                    str_list.append(c)
+                    if c == "\n" or c == '':
+                        break
+            received = ''.join(str_list)
+            str_list = []
+            if received:
+                for i in self.read_handlers:
+                    gevent.spawn(i, received)
             sleep(0.001)
 
     def add_read_handler(self, handler):
