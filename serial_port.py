@@ -74,29 +74,37 @@ class SerialPortReader(Actor):
                     sleep(0.1)
 
     def __listener__(self):
+        """
+        listens for incoming data.
+        calls the callback when EOL character is received or
+        nothing more received after frame_interval delay.
+        :return:
+        """
+        frame_interval = 0.1
         str_list = []
         while True:
             try:
-                sleep(0.01) # amount of time between packages
-                nextchar = self.ser.read(self.ser.inWaiting())
-                if nextchar:
-                    str_list.append(nextchar)
-                else:
-                    if len(str_list) > 0:
-                        received = ''.join(str_list)
-                        str_list = []
-                        
-                        # use received data
-                        #print "DEBUG: RECEIVED: ", repr(received)
-                        for i in self.read_handlers:
-                            gevent.spawn(i, received)
-
+                with Timeout(frame_interval):
+                    while True:
+                        c = self.ser.read()
+                        str_list.append(c)
+                        if c == "\n" or c == '':
+                            break
+                received = ''.join(str_list)
+                str_list = []
+                if received:
+                    for i in self.read_handlers:
+                        gevent.spawn(i, received)
+            except IOError:
+                self.ser.close()
             except:
                 try:
                     assert self.ser.is_open
                 except:
                     self.make_connection.go()
                     self.connection_made.wait()
+
+            sleep(0.001)
 
     def add_read_handler(self, handler):
         self.read_handlers.append(handler)
