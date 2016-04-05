@@ -102,6 +102,7 @@ class SerialPortReader(Actor):
                     gevent.spawn(i, received)
             sleep(0.001)
 
+
     def add_read_handler(self, handler):
         self.read_handlers.append(handler)
 
