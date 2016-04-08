@@ -262,6 +262,26 @@ class AktosConfig(MarkdownConfig):
         for l in self.raw_config_table():
             print ''.join(l)
 
+    def get(self, key_tree=None, default_value=None):
+        """
+
+        :param key_tree: "key.of.the.path"
+        :param default_value: returns this value if no key_tree found
+        :return: config value
+
+        if no key_tree is given, whole tree is returned
+        """
+        flattened_dictionary = self.flat_dict()
+        print "Flatten dict: ", flattened_dictionary
+        if key_tree is None:
+            return flattened_dictionary
+
+        try:
+            return flattened_dictionary[key_tree]
+        except:
+            return default_value
+
+
 
 
 if __name__ == '__main__':
