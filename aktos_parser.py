@@ -2,6 +2,10 @@
 
 import re
 from pprint import pprint
+import sys
+
+def warning(*objs):
+    sys.stderr.write("Warning: " + ''.join(*objs + ['\n']))
 
 class MarkdownConfig(object):
     """
@@ -16,14 +20,17 @@ class MarkdownConfig(object):
             print ''.join(fl)
 
     """
-    def __init__(self, config_file=''):
-        if config_file:
+    def __init__(self, config_file=None):
+        if config_file is not None:
             self.open_config(config_file)
 
 
     def open_config(self, config_file):
-        with open(config_file) as f:
-            self.content = f.read().decode('utf-8')
+        try:
+            with open(config_file) as f:
+                self.content = f.read().decode('utf-8')
+        except:
+            raise Exception("File can not be opened: ", config_file)
 
 
     def find_indent_char(self, content):
@@ -272,17 +279,28 @@ class AktosConfig(MarkdownConfig):
         if no key_tree is given, whole tree is returned
         """
         flattened_dictionary = self.flat_dict()
-        print "Flatten dict: ", flattened_dictionary
+        #print "Flatten dict: ", flattened_dictionary
         if key_tree is None:
             return flattened_dictionary
 
         try:
             return flattened_dictionary[key_tree]
         except:
-            return default_value
+            # get any values including this "key_tree"
+            s = {}
+            for k, v in flattened_dictionary.iteritems():
+                if k.startswith(key_tree):
+                    #print "k, v: ", k, v
+                    k = remove_prefix(k, key_tree + ".")
+                    s[k] = v
+
+            if s == {}:
+                s = default_value
+            return s
 
 
-
+def remove_prefix(x, prefix):
+    return x.split(prefix, 1)[-1]
 
 if __name__ == '__main__':
     c = AktosConfig('aktos-parser-test2.db')
