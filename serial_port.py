@@ -88,7 +88,7 @@ class SerialPortReader(Actor):
                 while True:
                     try:
                         c = self.ser.read()
-                    except IOError:
+                    except:
                         self.ser.close()
                         self.make_connection.go()
                         self.connection_made.wait()
