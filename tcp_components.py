@@ -13,12 +13,12 @@ class TcpHandlerActor(Actor):
     def __init__(self, socket, address):
         Actor.__init__(self)
         try:
+            self.line_ending = "\n"
             self.socket, self.address = socket, address
             self.socket_file = self.socket.makefile(mode='rwb')
             self.client_id = self.socket.getpeername()
             self.__listener_g__ = gevent.spawn(self.__socket_listener__)
             self.on_connect()
-            self.line_ending = "\n"
         except:
             traceback.print_exc()
             raise
