@@ -18,6 +18,7 @@ class TcpHandlerActor(Actor):
             self.client_id = self.socket.getpeername()
             self.__listener_g__ = gevent.spawn(self.__socket_listener__)
             self.on_connect()
+            self.line_ending = "\n"
         except:
             traceback.print_exc()
             raise
@@ -30,11 +31,20 @@ class TcpHandlerActor(Actor):
 
     def __socket_listener__(self):
         while True:
-            received = self.socket_file.readline()
-            if received == '':
-                break
-            gevent.spawn(self.socket_read, received)
-        self.kill()
+            with Timeout(0.01, False):
+                received_buff = ''
+                while True:
+                    received = self.socket.recv(1)
+                    if received == '':
+                        # Connection seems to be closed
+                        self.kill()
+                    received_buff += received
+                    if len(self.line_ending) > 0:
+                        if received == self.line_ending:
+                            # equivalent to "readline()"
+                            break
+            if len(received_buff) > 0:
+                gevent.spawn(self.socket_read, received_buff)
 
     def socket_read(self, data):
         print "received: ", data
@@ -79,7 +89,7 @@ class TcpClient(object):
         assert receiver is not None
         self.on_receive = receiver
 
-        self.try_to_connect()
+        #self.try_to_connect()
         gevent.spawn(self.socket_listener)
         gevent.spawn(self.recv_data_timeout)
         self.msg_max_age = 2  # seconds
@@ -87,6 +97,7 @@ class TcpClient(object):
         gevent.spawn(self.__send_queue_worker__)
 
         self.line_ending = "\n"
+
 
 
 
@@ -148,10 +159,13 @@ class TcpClient(object):
             data, timestamp = self.send_queue.get()
             while timestamp + self.msg_max_age > time.time():
                 try:
+                    print "sending following data: ", repr(data)
                     self.client_socket.send(data, timeout=0)
-                    if data[-len(self.line_ending)] != self.line_ending:
-                        self.client_socket.send(self.line_ending, timeout=0)
-
+                    if self.line_ending:
+                        print "here is a line ending: ", repr(self.line_ending)
+                        # Append a line ending if there is none found:
+                        if data[-len(self.line_ending)] != self.line_ending:
+                            self.client_socket.send(self.line_ending, timeout=0)
                     break
                 except:
                     self.try_to_connect()
