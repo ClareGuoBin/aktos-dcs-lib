@@ -20,6 +20,7 @@ class TcpHandlerActor(Actor):
             self.__listener_g__ = gevent.spawn(self.__socket_listener__)
             self.on_connect()
         except:
+            print "PROBLEM ON INIT!!!"
             traceback.print_exc()
             raise
 
@@ -33,12 +34,14 @@ class TcpHandlerActor(Actor):
         while True:
             with Timeout(0.01, False):
                 received_buff = ''
+                received = None
                 while True:
-                    received = self.socket.recv(1)
+                    received = self.socket_file.read(1)
                     if received == '':
                         # Connection seems to be closed
                         self.kill()
-                    received_buff += received
+                    elif received:
+                        received_buff += received
                     if len(self.line_ending) > 0:
                         if received == self.line_ending:
                             # equivalent to "readline()"
@@ -64,6 +67,7 @@ class TcpHandlerActor(Actor):
             self.__listener_g__.kill()
         except GreenletExit:
             pass
+
         self.socket_file.close()
 
 
