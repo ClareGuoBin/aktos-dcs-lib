@@ -120,6 +120,7 @@ class EMail(object):
             i = 0
             while True:
                 try:
+                    assert self.smtp_session is not None
                     failed = self.smtp_session.sendmail(self.mail_from, mailto, msg.as_string())
                     break
                 except Exception as er:
