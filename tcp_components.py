@@ -69,7 +69,8 @@ class TcpHandlerActor(Actor):
             pass
 
         self.socket_file.close()
-
+	self.socket.shutdown(socket.SHUT_RDWR)
+	self.socket.close()
 
 class TcpServerActor(Actor):
     def __init__(self, address="0.0.0.0", port=22334, handler=TcpHandlerActor):
